@@ -1,0 +1,21 @@
+[Unit]
+Description=PiPortal USB Composite Gadget (RNDIS + ECM + Mass Storage)
+Documentation=file:/etc/piportal/piportal.conf
+# configfs muss gemountet sein, bevor das Gadget gebaut wird.
+After=sys-kernel-config.mount systemd-modules-load.service
+Wants=sys-kernel-config.mount
+# Vor dem Netzwerk-Setup von usb0.
+Before=network-pre.target
+DefaultDependencies=no
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/piportal-gadget.sh up
+ExecStop=/usr/local/sbin/piportal-gadget.sh down
+# Bei transientem Fehler (UDC noch nicht bereit) einmalig nachfassen.
+ExecStartPre=/bin/sh -c 'modprobe libcomposite || true'
+
+[Install]
+WantedBy=sysinit.target

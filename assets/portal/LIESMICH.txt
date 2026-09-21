@@ -1,0 +1,42 @@
+===============================================================================
+  PiPortal  –  Willkommen
+===============================================================================
+
+Dieser Datenträger ist nur ein WEGWEISER. Die eigentlichen Dateien liegen
+auf einem geschützten Netzlaufwerk direkt auf dem PiPortal-Stick.
+
+-------------------------------------------------------------------------------
+  So greifst du auf deine Dateien zu
+-------------------------------------------------------------------------------
+
+1) Warte ~20-30 Sekunden nach dem Einstecken (der Pi bootet).
+
+2) Öffne den Windows-Explorer und gib oben in die Adresszeile ein:
+
+        \\10.10.0.1\PiPortal
+
+   Alternativ per Verknüpfung: Doppelklick auf  "PiPortal-Netzlaufwerk.url"
+   auf diesem Datenträger.
+
+3) Melde dich mit deinem SMB-Benutzer und -Passwort an.
+
+-------------------------------------------------------------------------------
+  Terminal-Zugang (SSH)
+-------------------------------------------------------------------------------
+
+Windows bringt SSH bereits mit - kein PuTTY nötig. Öffne PowerShell oder CMD:
+
+        ssh dietpi@10.10.0.1
+
+Oder Doppelklick auf  "connect-piportal.cmd"  auf diesem Datenträger.
+
+-------------------------------------------------------------------------------
+  Hinweise
+-------------------------------------------------------------------------------
+
+- Der PiPortal hat sein eigenes Internet (WLAN). Deine PC-Internetverbindung
+  bleibt unberührt.
+- Dieser Wegweiser-Datenträger ist schreibgeschützt (CD-ROM). Ablegen von
+  Dateien bitte über das Netzlaufwerk \\10.10.0.1\PiPortal.
+
+===============================================================================

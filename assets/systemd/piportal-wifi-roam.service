@@ -1,0 +1,16 @@
+[Unit]
+Description=PiPortal WLAN-Roaming (Heim-WLAN bevorzugt, Hotspot als Fallback)
+Documentation=file:/etc/piportal/piportal.conf
+After=network.target wpa_supplicant.service
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/piportal-wifi-roam.sh
+Restart=always
+RestartSec=10
+# Ressourcenschonend auf dem Zero 2 W.
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

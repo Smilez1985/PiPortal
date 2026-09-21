@@ -1,0 +1,21 @@
+# PiPortal – konsistente Zeilenenden über alle Plattformen.
+# Standard: Text automatisch normalisieren (im Repo LF).
+* text=auto eol=lf
+
+# Shell-Skripte MÜSSEN LF haben (laufen auf dem Pi/Linux) und sind ausführbar.
+*.sh    text eol=lf
+install.sh   text eol=lf
+uninstall.sh text eol=lf
+assets/cli/piportal        text eol=lf
+assets/gadget/*.sh         text eol=lf
+
+# Windows-Helfer braucht CRLF (wird auf dem Windows-Host doppelgeklickt).
+*.cmd   text eol=crlf
+*.url   text eol=crlf
+
+# Binärdateien nie anfassen.
+*.jpg   binary
+*.jpeg  binary
+*.png   binary
+*.img   binary
+*.iso   binary

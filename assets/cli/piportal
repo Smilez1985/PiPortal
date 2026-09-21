@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  piportal – Verwaltungs-CLI für den PiPortal
+#  Befehle:
+#     piportal --status        Kompakter Statusüberblick (IP, Uptime, CPU, RAM …)
+#     piportal --wifi-switch    WLAN wechseln (Menü) oder: --wifi-switch next
+#     piportal --update         System aktualisieren + Reboot
+#     piportal --help           Diese Hilfe
+#  Gedacht auch für die Steuerung vom Host-PC über die USB-Verbindung
+#  (ssh dietpi@10.10.0.1), selbst wenn gerade kein WLAN verbunden ist.
+# =============================================================================
+set -uo pipefail
+
+CONF="/etc/piportal/piportal.conf"
+USB_LAN_IP="10.10.0.1"
+# shellcheck disable=SC1090
+[ -f "$CONF" ] && . "$CONF" 2>/dev/null
+
+WIFI_IFACE="wlan0"
+
+# ---- Farben (nur bei Terminal) ------------------------------------------------
+if [ -t 1 ]; then
+    B=$'\033[1m'; DIM=$'\033[2m'; R=$'\033[0m'
+    CY=$'\033[36m'; GN=$'\033[32m'; YL=$'\033[33m'; RD=$'\033[31m'
+else
+    B=""; DIM=""; R=""; CY=""; GN=""; YL=""; RD=""
+fi
+
+# sudo-Wrapper (CLI wird meist als dietpi aufgerufen, braucht aber wpa_cli/reboot).
+_sudo() { if [ "$(id -u)" -eq 0 ]; then "$@"; else sudo "$@"; fi; }
+
+# ==============================================================================
+#  --status
+# ==============================================================================
+cmd_status() {
+    local host up load temp mem_used mem_tot swap_used swap_tot zram
+    host="$(hostname)"
+    up="$(uptime -p 2>/dev/null | sed 's/^up //')"
+    load="$(cut -d' ' -f1-3 /proc/loadavg 2>/dev/null)"
+
+    # CPU-Temperatur (vcgencmd oft nicht verfügbar -> thermal_zone).
+    if [ -r /sys/class/thermal/thermal_zone0/temp ]; then
+        temp="$(( $(cat /sys/class/thermal/thermal_zone0/temp) / 1000 ))°C"
+    else
+        temp="n/a"
+    fi
+
+    # RAM/Swap in MiB.
+    read -r mem_tot mem_used <<<"$(free -m | awk '/^Speicher:|^Mem:/{print $2, $3}')"
+    read -r swap_tot swap_used <<<"$(free -m | awk '/^Swap:/{print $2, $3}')"
+    zram="$(zramctl --noheadings 2>/dev/null | awk '{print $3}' | head -1)"
+
+    # Netzwerk.
+    local ip_usb ip_wlan ssid signal
+    ip_usb="$(ip -4 -br addr show usb0 2>/dev/null | awk '{print $3}')"
+    ip_wlan="$(ip -4 -br addr show "$WIFI_IFACE" 2>/dev/null | awk '{print $3}')"
+    ssid="$(_sudo wpa_cli -i "$WIFI_IFACE" status 2>/dev/null | sed -n 's/^ssid=//p')"
+    signal="$(_sudo wpa_cli -i "$WIFI_IFACE" signal_poll 2>/dev/null | sed -n 's/^RSSI=//p')"
+    [ -n "$signal" ] && signal="${signal} dBm"
+
+    # Verbundener Host (DHCP-Lease auf usb0).
+    local host_lease
+    host_lease="$(awk '{print $3" ("$4")"}' /var/lib/misc/dnsmasq.leases 2>/dev/null | head -1)"
+
+    # Dienste.
+    svc() { systemctl is-active "$1" 2>/dev/null | grep -q active && printf '%son%s' "$GN" "$R" || printf '%soff%s' "$RD" "$R"; }
+
+    printf '\n%s╭─ PiPortal ─ %s ─────────────────────────────╮%s\n' "$CY" "$host" "$R"
+    printf '  %sUptime%s   %s   %sLast%s %s\n' "$B" "$R" "${up:-n/a}" "$DIM" "$R" "${load:-n/a}"
+    printf '  %sCPU-Temp%s %s\n' "$B" "$R" "$temp"
+    printf '  %sRAM%s      %s / %s MiB    %sSwap%s %s / %s MiB   %szram%s %s\n' \
+        "$B" "$R" "${mem_used:-?}" "${mem_tot:-?}" "$B" "$R" "${swap_used:-?}" "${swap_tot:-?}" "$DIM" "$R" "${zram:-n/a}"
+    printf '%s├─ Netzwerk ─────────────────────────────────────┤%s\n' "$CY" "$R"
+    printf '  %susb0%s  %s   %s(Steuerung/SMB)%s\n' "$B" "$R" "${ip_usb:-–}" "$DIM" "$R"
+    printf '  %swlan0%s %s   %sSSID:%s %s   %sSignal:%s %s\n' "$B" "$R" "${ip_wlan:-–}" "$DIM" "$R" "${ssid:-–}" "$DIM" "$R" "${signal:-n/a}"
+    printf '  %sHost am USB%s %s\n' "$B" "$R" "${host_lease:-– (keiner verbunden)}"
+    printf '%s├─ Dienste ──────────────────────────────────────┤%s\n' "$CY" "$R"
+    printf '  Gadget %s   dnsmasq %s   Samba %s   WLAN-Roam %s\n' \
+        "$(svc piportal-gadget)" "$(svc dnsmasq)" "$(svc smbd)" "$(svc piportal-wifi-roam)"
+    printf '%s╰────────────────────────────────────────────────╯%s\n\n' "$CY" "$R"
+}
+
+# ==============================================================================
+#  --wifi-switch  [next | <id>]
+# ==============================================================================
+# Listet konfigurierte Netze: gibt "id<TAB>ssid<TAB>flags" aus.
+_wifi_list() { _sudo wpa_cli -i "$WIFI_IFACE" list_networks 2>/dev/null | tail -n +2; }
+_wifi_current_id() { _wifi_list | awk -F'\t' '/\[CURRENT\]/{print $1; exit}'; }
+
+_wifi_apply() {
+    local id="$1"
+    _sudo wpa_cli -i "$WIFI_IFACE" select_network "$id" >/dev/null 2>&1
+    # Nach dem gezielten Wechsel alle Netze wieder als Kandidaten zulassen,
+    # damit Reconnect/Roaming bei Verlust weiter funktioniert.
+    _sudo wpa_cli -i "$WIFI_IFACE" enable_network all >/dev/null 2>&1
+    _sudo wpa_cli -i "$WIFI_IFACE" save_config >/dev/null 2>&1
+    echo "${GN}Wechsle zu Netzwerk-ID ${id}…${R} (Aufbau kann einige Sekunden dauern)"
+}
+
+cmd_wifi_switch() {
+    local arg="${1:-}"
+    local list; list="$(_wifi_list)"
+    if [ -z "$list" ]; then
+        echo "${RD}Keine WLAN-Netzwerke konfiguriert.${R}"; return 1
+    fi
+    local count; count="$(printf '%s\n' "$list" | wc -l)"
+    local cur; cur="$(_wifi_current_id)"
+
+    # Variante A: gezielte ID.
+    if printf '%s' "$arg" | grep -qE '^[0-9]+$'; then
+        _wifi_apply "$arg"; return 0
+    fi
+
+    # Variante B: "next" -> zur nächsten ID rotieren.
+    if [ "$arg" = "next" ]; then
+        local ids next
+        ids="$(printf '%s\n' "$list" | cut -f1)"
+        if [ -n "$cur" ]; then
+            next="$(printf '%s\n' "$ids" | awk -v c="$cur" 'BEGIN{f=0} {a[NR]=$0} END{for(i=1;i<=NR;i++) if(a[i]==c){print a[(i%NR)+1]; f=1}; if(!f) print a[1]}')"
+        else
+            next="$(printf '%s\n' "$ids" | head -1)"
+        fi
+        _wifi_apply "$next"; return 0
+    fi
+
+    # Variante C (Default): Menü.
+    echo
+    echo "${B}Verfügbare WLAN-Profile:${R}"
+    printf '%s\n' "$list" | while IFS=$'\t' read -r id ssid bssid flags; do
+        local mark="  "
+        printf '%s' "$flags" | grep -q '\[CURRENT\]' && mark="${GN}➜ ${R}"
+        printf '   %s[%s] %s %s\n' "$mark" "$id" "${ssid:-<versteckt>}" "${DIM}${flags}${R}"
+    done
+    echo
+    local sel
+    read -r -p "Netzwerk-ID wählen (leer = abbrechen): " sel
+    [ -z "$sel" ] && { echo "Abgebrochen."; return 0; }
+    if printf '%s' "$sel" | grep -qE '^[0-9]+$'; then
+        _wifi_apply "$sel"
+    else
+        echo "${RD}Ungültige Auswahl.${R}"; return 1
+    fi
+}
+
+# ==============================================================================
+#  --update
+# ==============================================================================
+cmd_update() {
+    local yes="${1:-}"
+    echo "${YL}${B}PiPortal-Update${R}"
+    echo "  Führt aus: dietpi-update  ->  apt update && upgrade  ->  Reboot"
+    if [ "$yes" != "-y" ] && [ "$yes" != "--yes" ]; then
+        local a; read -r -p "Fortfahren und danach neu starten? [j/N] " a
+        case "$a" in [jJyY]|[jJ][aA]) ;; *) echo "Abgebrochen."; return 0;; esac
+    fi
+    echo "${CY}» DietPi-Update…${R}"
+    if [ -x /boot/dietpi/dietpi-update ]; then _sudo /boot/dietpi/dietpi-update 1; else echo "  (dietpi-update nicht gefunden, übersprungen)"; fi
+    echo "${CY}» apt update/upgrade…${R}"
+    _sudo apt-get update
+    DEBIAN_FRONTEND=noninteractive _sudo apt-get -y -o Dpkg::Options::=--force-confold upgrade
+    _sudo apt-get -y autoremove --purge
+    sync
+    echo "${GN}Fertig – starte neu…${R}"
+    _sudo systemd-run --no-block reboot 2>/dev/null || _sudo reboot
+}
+
+# ==============================================================================
+#  Hilfe / Dispatch
+# ==============================================================================
+cmd_help() {
+    cat <<EOF
+${B}piportal${R} – Verwaltungs-CLI für den PiPortal
+
+  ${CY}piportal --status${R}         Kompakter Überblick: IP, Uptime, CPU-Temp, RAM/Swap, Dienste
+  ${CY}piportal --wifi-switch${R}    WLAN-Profil wechseln (Menü)
+  ${CY}piportal --wifi-switch next${R}  Zum nächsten konfigurierten WLAN rotieren
+  ${CY}piportal --wifi-switch <id>${R}  Gezielt zu WLAN-ID wechseln
+  ${CY}piportal --update${R}         dietpi-update + apt upgrade + Reboot (mit -y ohne Rückfrage)
+  ${CY}piportal --help${R}           Diese Hilfe
+
+Tipp: Vom Host-PC per USB erreichbar mit  ${DIM}ssh dietpi@${USB_LAN_IP}${R}  –
+auch wenn der Pi gerade kein WLAN hat.
+EOF
+}
+
+case "${1:-}" in
+    --status|status|-s)        cmd_status ;;
+    --wifi-switch|wifi-switch|-w) shift 2>/dev/null; cmd_wifi_switch "${1:-}" ;;
+    --update|update|-u)        shift 2>/dev/null; cmd_update "${1:-}" ;;
+    --help|help|-h|"")         cmd_help ;;
+    *) echo "${RD}Unbekannter Befehl: $1${R}"; echo; cmd_help; exit 1 ;;
+esac

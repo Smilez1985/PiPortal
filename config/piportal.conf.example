@@ -1,0 +1,99 @@
+# =============================================================================
+#  PiPortal – zentrale Konfiguration
+# =============================================================================
+#  Kopiere diese Datei nach  config/piportal.conf  und passe die Werte an:
+#      cp config/piportal.conf.example config/piportal.conf
+#      nano config/piportal.conf
+#
+#  config/piportal.conf ist per .gitignore vom Repo ausgeschlossen und darf
+#  Secrets (WLAN-Passwörter) enthalten. Diese .example-Datei niemals mit
+#  echten Passwörtern füllen!
+#
+#  Leere WLAN-Felder => der Installer fragt interaktiv nach bzw. übernimmt
+#  eine bereits vorhandene wpa_supplicant.conf.
+# =============================================================================
+
+# ---------------------------------------------------------------- Hostname ---
+# Gerätename (Zugriff u. a. via \\<name>.local vom Windows-PC).
+PIPORTAL_HOSTNAME="PiPortal"
+
+# ------------------------------------------------------------------ USB-LAN --
+# Feste IP des Pi auf der USB-Netzwerkschnittstelle (Gegenstelle zum Windows-PC).
+# Laut Projektvorgabe darf 10.10.0.x im Repo im Klartext stehen.
+USB_LAN_IP="10.10.0.1"
+USB_LAN_PREFIX="24"                 # CIDR-Prefix (24 = 255.255.255.0)
+
+# DHCP-Bereich, den der Pi dem Windows-Host zuweist.
+DHCP_RANGE_START="10.10.0.10"
+DHCP_RANGE_END="10.10.0.50"
+DHCP_LEASE="24h"
+
+# ------------------------------------------------------------------- Gadget --
+# USB-Identität des Gadgets. 1d6b/0104 = Linux Foundation / Multifunction
+# Composite Gadget (Standard, kein fremder Hersteller wird imitiert).
+GADGET_VENDOR_ID="0x1d6b"
+# Eindeutige Product-ID. Falls Windows das Gadget nach vielen Tests „falsch"
+# gecacht hat (RNDIS bindet nicht mehr), hier einen neuen Wert setzen –
+# Windows sieht dann ein frisches Gerät und liest die MS-OS-Descriptoren neu.
+GADGET_PRODUCT_ID="0xa4ac"
+GADGET_MANUFACTURER="PiPortal"
+GADGET_PRODUCT="PiPortal Composite Gadget"
+# Seriennummer: leer => wird deterministisch aus /etc/machine-id abgeleitet.
+GADGET_SERIAL=""
+
+# Welche Gadget-Funktionen aktiv sind (1 = an, 0 = aus).
+# WICHTIG: RNDIS + ECM zusammen ergibt ein Multi-Config-Gadget, das Windows
+# NICHT sauber bindet (keine Treiber für die Funktionen). Für Windows-Hosts
+# daher nur RNDIS (Single-Config). ECM nur aktivieren, wenn der Host Linux/macOS
+# ist – dann RNDIS besser ausschalten.
+ENABLE_RNDIS="1"                    # Windows-Netzwerk (treiberlos)
+ENABLE_ECM="0"                      # Linux/macOS-Netzwerk – für Windows AUS lassen
+ENABLE_NCM="0"                      # nur Windows 11 – vorerst aus
+ENABLE_MASS_STORAGE="1"             # read-only Wegweiser-Datenträger
+
+# --------------------------------------------------------------------- WLAN --
+WIFI_COUNTRY="DE"
+
+# Profil 1: bevorzugtes Heim-WLAN (höhere Priorität).
+WIFI_HOME_SSID=""
+WIFI_HOME_PSK=""
+
+# Profil 2: Handy-Hotspot als Fallback.
+WIFI_HOTSPOT_SSID=""
+WIFI_HOTSPOT_PSK=""
+
+# Roaming: Signalschwelle (dBm) und Prüfintervall (Sekunden) des bgscan.
+WIFI_BGSCAN="simple:30:-65:300"
+WIFI_ROAM_INTERVAL="15"            # Sekunden zwischen Roaming-Prüfungen
+
+# ---------------------------------------------------------------------- SMB --
+SMB_USER="dietpi"                   # existierender Systembenutzer
+SMB_SHARE_NAME="PiPortal"           # Freigabename => \\10.10.0.1\PiPortal
+SMB_SHARE_PATH="/srv/piportal/share"
+# SMB-Passwort: leer => der Installer fragt interaktiv nach (empfohlen).
+SMB_PASSWORD=""
+SMB_ENCRYPT="0"                     # 1 = SMB3-Verschlüsselung erzwingen (CPU-Last)
+
+# ------------------------------------------------------------------- Portal --
+PORTAL_LABEL="PIPORTAL"             # Datenträgername (max. 11 Zeichen)
+PORTAL_IMAGE="/srv/piportal/portal.img"   # read-only FAT-Wegweiser-Image
+
+# -------------------------------------------------------------------- Extras --
+ENABLE_SSH_HELPER="1"               # connect-piportal.cmd aufs Portal legen
+ENABLE_CLAUDE_CODE="0"              # Node.js LTS + Claude Code CLI installieren
+
+# -------------------------------------------------------------- Swap & zram --
+# SD-Swapfile-Größe. "auto" = nach SD-Kartengröße staffeln:
+#   >=64 GB => 16 GB | >=32 GB => 8 GB | >=16 GB => 4 GB | sonst => 2 GB
+# Alternativ feste Größe in MiB (z. B. 8192) oder 0 zum Deaktivieren.
+SWAP_MODE="auto"
+SWAP_LOCATION="/var/swap"
+SWAP_RESERVE_MIB="8192"             # so viel Plattenplatz mind. frei lassen
+SWAPPINESS="80"                     # höher = eher auslagern (zram ist schnell)
+
+# zram = komprimierter Swap IM RAM (NICHT auf SD, RAM-begrenzt).
+ENABLE_ZRAM="1"
+ZRAM_PERCENT="75"                   # Anteil des RAM, der als zram dient
+
+# ------------------------------------------------------------------ Backup ---
+BACKUP_DIR="/var/backups/piportal"  # Ziel der automatischen Sicherungen

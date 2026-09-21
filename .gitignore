@@ -1,0 +1,43 @@
+# --- Lokale Konfiguration mit Secrets (NIEMALS committen) ---
+config/piportal.conf
+config/*.local
+*.secret
+secrets.env
+
+# --- Ursprüngliche Roh-Doku enthält Secrets (Passwort/IPs) => nicht committen ---
+Pi-Portal.md
+
+# --- Backups, die der Installer auf dem Zielsystem erzeugt ---
+backups/
+*.bak
+*.backup
+
+# --- Erzeugte Artefakte ---
+*.iso
+*.img
+build/
+tmp/
+
+# --- Betriebssystem / Editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# --- Logs & temporäre Artefakte ---
+*.log
+*.tmp
+err.tmp
+
+# --- Interne, dated Entwicklungs-Snapshots (nur lokale Referenz).
+#     Ihr Inhalt ist konsolidiert in den öffentlichen Doku-Dateien
+#     docs/ARCHITECTURE(.de).md und docs/DESIGN_NOTES(.de).md.
+#     Zeilen entfernen, falls die Roh-Snapshots doch ins Repo sollen. ---
+docs/RECON_*.md
+docs/FAHRPLAN_*.md
+docs/BESTPRACTICE_*.md
+
+# --- Legacy-/Bastelcode aus dem Erstaufbau (nur lokale Referenz) ---
+legacy/
