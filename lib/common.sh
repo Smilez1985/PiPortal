@@ -47,8 +47,37 @@ require_root() {
     fi
 }
 
-# Prüft, ob wir auf einem plausiblen DietPi/Raspberry-Ziel laufen.
+# Angriffs-/Pentest-Distributionen (Blacklist). PiPortal ist ein defensives
+# Admin-/Labor-Werkzeug und wird auf diesen Systemen bewusst NICHT installiert
+# (Security by Design). Alles andere ist erlaubt – es gibt KEINEN DietPi-Zwang.
+PIPORTAL_OFFENSIVE_DISTROS="kali parrot blackarch pentoo backbox kali-rolling parrotsec"
+
+# assert_os – reine OS-Blacklist. Wird als ALLERERSTES im Installer aufgerufen,
+# noch vor der Root-Prüfung, damit ein Angriffssystem sofort abgewiesen wird.
+# Abgleich gegen ID und ID_LIKE aus /etc/os-release (in Subshells, damit die
+# os-release-Variablen nicht in die aufrufende Shell leaken).
+assert_os() {
+    local os_id="" os_like="" os_name="unbekannt"
+    if [ -r /etc/os-release ]; then
+        os_id="$(. /etc/os-release 2>/dev/null; printf '%s' "${ID:-}")"
+        os_like="$(. /etc/os-release 2>/dev/null; printf '%s' "${ID_LIKE:-}")"
+        os_name="$(. /etc/os-release 2>/dev/null; printf '%s' "${PRETTY_NAME:-${NAME:-unbekannt}}")"
+    fi
+    local d
+    for d in $PIPORTAL_OFFENSIVE_DISTROS; do
+        case " ${os_id} ${os_like} " in
+            *" ${d} "*)
+                die "Installation auf '${os_name}' verweigert. PiPortal ist ein defensives Admin- und Labor-Werkzeug, kein Angriffssystem, und wird auf Pentest-Distributionen (Kali/Parrot/…) bewusst nicht installiert. Wer das umgehen will, muss den Quelltext bewusst und eigenverantwortlich anpassen."
+                ;;
+        esac
+    done
+}
+
+# Plattform-Plausibilität (nur Hinweise, kein Abbruch – kein DietPi-Zwang).
 assert_target() {
+    local os_id=""
+    [ -r /etc/os-release ] && os_id="$(. /etc/os-release 2>/dev/null; printf '%s' "${ID:-}")"
+    [ "${os_id}" = "dietpi" ] || log_info "Kein DietPi erkannt – PiPortal ist für DietPi entwickelt, läuft aber grundsätzlich auf Debian-Derivaten."
     [ -d /sys/kernel/config ] || log_warn "configfs (/sys/kernel/config) nicht gefunden – Gadget-Modul wird scheitern."
     [ -f /boot/firmware/config.txt ] || log_warn "/boot/firmware/config.txt nicht gefunden – abweichender Boot-Pfad?"
 }

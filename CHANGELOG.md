@@ -35,6 +35,12 @@ First complete, hardware-verified release. Live-tested on Windows 11: the RNDIS 
 - **Consolidated documentation**: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) verified against the
   shipping code (single source of truth) and [`docs/DESIGN_NOTES.md`](docs/DESIGN_NOTES.md) added — the
   full what/how/why of the live bring-up and its root-cause fixes. Both bilingual (EN/DE).
+- **OS install guard** (`assert_os`, the first check in `install.sh`, before the root check): refuses to
+  run on pentest distributions (Kali, Parrot, …) via an `/etc/os-release` blocklist. All other systems
+  are allowed — no single-OS lock-in.
+- **Security & roadmap docs**: [`docs/SECURITY.md`](docs/SECURITY.md) (Security-by-Design barriers +
+  dual-use disclaimer) and [`docs/ROADMAP.md`](docs/ROADMAP.md) (planned admin toolbox / Cowork
+  integration, NCM profile, publish cycle). Both bilingual (EN/DE).
 
 ### Fixed
 - **Windows host received no DHCP address (ended up on APIPA 169.254.x.x):** The

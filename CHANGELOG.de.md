@@ -35,6 +35,12 @@ Erste vollständige, an Hardware verifizierte Fassung. Live an Windows 11 getest
 - **Konsolidierte Dokumentation**: [`docs/ARCHITECTURE.de.md`](docs/ARCHITECTURE.de.md) gegen den
   ausgelieferten Code geprüft (alleinige Wahrheitsquelle) und [`docs/DESIGN_NOTES.de.md`](docs/DESIGN_NOTES.de.md)
   ergänzt — das vollständige Was/Wie/Warum der Live-Inbetriebnahme samt Ursachen-Fixes. Beide zweisprachig (EN/DE).
+- **OS-Installations-Sperre** (`assert_os`, erste Prüfung in `install.sh`, vor der Root-Prüfung): verweigert
+  die Ausführung auf Pentest-Distributionen (Kali, Parrot, …) per `/etc/os-release`-Blacklist. Alle anderen
+  Systeme sind erlaubt — keine Bindung an ein einziges OS.
+- **Security- & Roadmap-Doku**: [`docs/SECURITY.de.md`](docs/SECURITY.de.md) („Security by Design"-Barrieren +
+  Dual-Use-Disclaimer) und [`docs/ROADMAP.de.md`](docs/ROADMAP.de.md) (geplanter Admin-Werkzeugkasten /
+  Cowork-Integration, NCM-Profil, Publish-Zyklus). Beide zweisprachig (EN/DE).
 
 ### Behoben
 - **Windows-Host bekam keine DHCP-Adresse (landete auf APIPA 169.254.x.x):** Die

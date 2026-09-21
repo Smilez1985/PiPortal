@@ -17,7 +17,7 @@ Steckt man ihn in einen PC, passieren gleichzeitig zwei Dinge:
 - Der PC erkennt ihn als **Netzwerkkarte** — man kann sich also per Terminal auf dem kleinen Rechner einloggen und ihn steuern, ganz ohne zusätzliches Kabel.
 - Der PC zeigt ein **kleines Laufwerk** an — einen „Wegweiser", der auf einen geschützten Dateibereich führt, über den man sicher Dateien austauscht.
 
-Das Besondere: Der Stick hat sein **eigenes Internet über WLAN** (z. B. den Handy-Hotspot). Er belastet also weder das Netzwerk noch die Internetleitung des PCs und umgeht Firmen-Firewalls — der PC merkt nichts davon, seine eigene Verbindung bleibt unangetastet.
+Das Besondere: Der Stick hat sein **eigenes Internet über WLAN** (z. B. den Handy-Hotspot). Diesen Uplink nutzt er nur für sich und rührt das Host-Netz nicht an — er belastet also weder das Netzwerk noch die Internetleitung des PCs, und dessen eigene Verbindung bleibt komplett unangetastet.
 
 Gedacht ist das Ganze als **mobiles Schweizer Taschenmesser für Technikbegeisterte und Admins**: eine abgeschottete Arbeitsumgebung, die man überall dabei hat — zum Beispiel, um Programmier- und KI-Werkzeuge laufen zu lassen, ohne den eigentlichen PC anzufassen.
 
@@ -177,9 +177,20 @@ PiPortal/
 ├── install.sh / uninstall.sh   · Ein-Klick-Installer & Rollback
 ├── config/                     · zentrale Konfiguration (Vorlage mit Platzhaltern)
 ├── lib/ · modules/ · assets/   · Installer-Bausteine, Skripte, CLI, Portal-Inhalt
-├── docs/                       · Architektur-Entscheidungen & Design-Notizen (DE/EN)
+├── docs/                       · Architektur, Design, Security & Roadmap (DE/EN)
 └── images/                     · Fotos des Geräts
 ```
+
+## Security by Design
+
+PiPortal ist ein **defensives** Werkzeug, kein Angriffsgerät — und so gebaut, dass Missbrauch schwerer fällt:
+
+- Der Installer **verweigert die Ausführung auf Pentest-Distributionen** (Kali, Parrot, …) als allererste Prüfung.
+- Er gibt dem Host **kein Gateway und kein DNS** und aktiviert nie IP-Forwarding — er kann den Traffic des Hosts nicht tunneln.
+- Der Wegweiser-Datenträger ist **read-only**; der eigentliche Share braucht **Benutzername und Passwort** (kein Gastzugang).
+- **Keine Secrets** im Repo — jede Zugangsdaten wird bei der Installation eingerichtet.
+
+Vollständige Begründung und Dual-Use-Disclaimer: [`docs/SECURITY.de.md`](docs/SECURITY.de.md). Geplante Richtungen: [`docs/ROADMAP.de.md`](docs/ROADMAP.de.md).
 
 ## Verantwortungsvolle Nutzung
 

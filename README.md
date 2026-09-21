@@ -17,7 +17,7 @@ When you plug it into a PC, two things happen at once:
 - The PC recognizes it as a **network adapter** — so you can log into the little machine from a terminal and control it, with no extra cable needed.
 - The PC shows a **small drive** — a "signpost" that points to a protected file area you use to exchange files securely.
 
-The clever part: the stick has its **own internet over Wi-Fi** (e.g. your phone's hotspot). That means it puts no load on the PC's network or internet connection and bypasses corporate firewalls — the PC notices nothing, and its own connection stays untouched.
+The clever part: the stick has its **own internet over Wi-Fi** (e.g. your phone's hotspot). It uses that uplink for itself and never touches the host's network — so it puts no load on the PC's network or internet connection, and the PC's own connection stays completely untouched.
 
 The whole thing is meant to be a **mobile Swiss Army knife for tech enthusiasts and admins**: a sealed-off work environment you can carry anywhere — for example, to run development and AI tools without touching the actual PC.
 
@@ -178,9 +178,20 @@ PiPortal/
 ├── install.sh / uninstall.sh   · One-click installer & rollback
 ├── config/                     · central configuration (template with placeholders)
 ├── lib/ · modules/ · assets/   · installer building blocks, scripts, CLI, portal content
-├── docs/                       · architecture decisions & design notes (EN/DE)
+├── docs/                       · architecture, design, security & roadmap docs (EN/DE)
 └── images/                     · photos of the device
 ```
+
+## Security by design
+
+PiPortal is a **defensive** tool, not an attack device — and it is built to make misuse harder:
+
+- The installer **refuses to run on pentest distributions** (Kali, Parrot, …) as its very first check.
+- It hands the host **no gateway and no DNS** and never enables IP forwarding — it cannot tunnel the host's traffic.
+- The signpost drive is **read-only**; the real share needs a **username and password** (no guest access).
+- **No secrets** ship in the repo — every credential is set up at install time.
+
+Full rationale and the dual-use disclaimer: [`docs/SECURITY.md`](docs/SECURITY.md). Planned directions: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Responsible use
 

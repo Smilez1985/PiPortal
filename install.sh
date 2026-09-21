@@ -137,6 +137,7 @@ main() {
         shift || true
     done
 
+    assert_os          # Security by Design: Angriffs-Distros (Kali/Parrot/…) hart ablehnen – als Allererstes.
     require_root
     assert_target
     load_config
