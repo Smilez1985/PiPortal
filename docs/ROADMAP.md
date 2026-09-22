@@ -21,14 +21,6 @@ The bigger vision behind PiPortal is a self-contained, carry-anywhere workbench:
 
 - **Automatic publish cycle** for the signpost image (`forced_eject` → swap `lun.0/file`), so content updates on the read-only volume propagate to the host cleanly without a reconnect.
 
-## Robustness (unplug safety)
-
-- **Read-only / overlay root** so a hard power-off — pulling the stick from the USB port — can't corrupt
-  the OS. The catch (thanks to the design note that surfaced it): a naive overlay makes *everything*
-  volatile, so the **writable SMB share must move to a separate writable partition** excluded from the
-  overlay, otherwise the share would be wiped on every reboot. That is a bigger change — hence roadmap,
-  not shipped. Until then: `piportal --poweroff` shuts down cleanly before unplugging.
-
 ## Quality
 
 - **shellcheck CI** (GitHub Actions) over all shell scripts, as a lightweight guard against regressions.
