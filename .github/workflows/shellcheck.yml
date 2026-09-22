@@ -1,0 +1,39 @@
+name: shellcheck
+
+# Statische Analyse aller Shell-Skripte bei jedem Push / Pull Request.
+# Faengt die Klasse von Bugs, die kein Syntax-Check sieht (Quoting, pipefail-
+# Fallstricke, tote Zweige …) – ergaenzt, ersetzt aber nicht das Testen am Geraet.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        run: |
+          set -euo pipefail
+          files=(
+            install.sh
+            uninstall.sh
+            lib/*.sh
+            modules/*.sh
+            assets/cli/piportal
+            assets/cli/piportal-aliases.sh
+            assets/gadget/*.sh
+            assets/wifi/*.sh
+            assets/profile.d/*.sh
+            tools/update/update_orchestrator.sh
+            tools/update/modules/*.sh
+          )
+          echo "Prüfe ${#files[@]} Dateien mit shellcheck $(shellcheck --version | awk '/version:/{print $2}')"
+          # --severity=warning: Fehler + Warnungen lassen die CI rot werden,
+          # Info-/Style-Hinweise nur zur Info. .shellcheckrc steuert Ausnahmen.
+          shellcheck --severity=warning -x "${files[@]}"

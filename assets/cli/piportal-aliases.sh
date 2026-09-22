@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # =============================================================================
 #  PiPortal – Shell-Komfort-Aliase  (nach /etc/profile.d/)
 #  Wird bei jeder interaktiven Login-Shell geladen.

@@ -1,0 +1,8 @@
+# PiPortal – shellcheck-Konfiguration
+#
+# SC1090/SC1091: dynamische 'source'-Pfade (Config, Module) sind statisch nicht
+#   auflösbar – bewusst so gewollt.
+# SC2034: gemeinsame Variablen aus gesourcten Libs (LOG_TAG, PIPORTAL_* …) werden
+#   vom sourcenden Skript genutzt; isoliert betrachtet meldet shellcheck sie als
+#   "unused". Fehlalarm für dieses Muster.
+disable=SC1090,SC1091,SC2034

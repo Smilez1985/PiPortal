@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # =============================================================================
 #  PiPortal – Wartungs-Abfrage beim Login (nach /etc/profile.d/ installiert)
 #

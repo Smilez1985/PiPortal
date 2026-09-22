@@ -35,7 +35,13 @@ EOF
 list_backups() {
     log_step "Verfügbare Backups in ${BACKUP_DIR}"
     if [ -d "$BACKUP_DIR" ]; then
-        ls -1dt "${BACKUP_DIR}"/*/ 2>/dev/null | grep -v '/latest/$' || log_info "Keine Backups gefunden."
+        local d found=0
+        for d in "${BACKUP_DIR}"/*/; do
+            [ -d "$d" ] || continue
+            case "$d" in */latest/) continue ;; esac
+            echo "  $d"; found=1
+        done
+        [ "$found" = "1" ] || log_info "Keine Backups gefunden."
     else
         log_info "Kein Backup-Verzeichnis vorhanden."
     fi
