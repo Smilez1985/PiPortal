@@ -116,6 +116,8 @@ build_portal_image() {
     cp "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" "$staging/"
     cp "${PIPORTAL_ASSETS_DIR}/portal/PiPortal-Netzlaufwerk.url" "$staging/"
     [ "${ENABLE_SSH_HELPER}" = "1" ] && cp "${PIPORTAL_ASSETS_DIR}/windows/connect-piportal.cmd" "$staging/"
+    # Netzlaufwerk mit (temporaerem) Laufwerkbuchstaben verbinden.
+    cp "${PIPORTAL_ASSETS_DIR}/windows/Netzlaufwerk-verbinden.cmd" "$staging/" 2>/dev/null || true
     # Erst-Einrichtung: Passwort setzen (keine Daten weg) + Reset (mit Loeschen).
     cp "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort_setzen.vbs"    "$staging/" 2>/dev/null || true
     cp "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort_vergessen.vbs" "$staging/" 2>/dev/null || true

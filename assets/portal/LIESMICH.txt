@@ -17,6 +17,8 @@ auf einem geschützten Netzlaufwerk direkt auf dem PiPortal-Stick.
 
    Alternativ per Verknüpfung: Doppelklick auf  "PiPortal-Netzlaufwerk.url"
    auf diesem Datenträger.
+   Für einen echten Laufwerkbuchstaben (nur bis zum Neustart, nicht dauerhaft):
+   Doppelklick auf  "Netzlaufwerk-verbinden.cmd".
 
 3) Melde dich mit deinem SMB-Benutzer und -Passwort an.
    Tipp: den Benutzernamen als  10.10.0.1\dietpi  (bzw. PiPortal\dietpi)
