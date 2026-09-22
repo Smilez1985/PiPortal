@@ -34,7 +34,7 @@ Eine Live-Recon per SSH ermittelte die Wahrheit, bevor irgendetwas geändert wur
 Drei Architektur-Entscheidungen wurden gegen aktuelle Best Practice validiert, bevor am laufenden Gerät etwas angefasst wurde (volle Begründung + Quellen in [`ARCHITECTURE.de.md`](ARCHITECTURE.de.md)):
 
 1. **Gadget-Technik → configfs / libcomposite** (`g_multi` ausmustern).
-2. **Windows-Netzwerk → RNDIS + MS-OS-Descriptors** (die reichweitenstärkste Windows-Ethernet-Option; siehe die RNDIS/Win11-Einschränkung in [`ARCHITECTURE.de.md`](ARCHITECTURE.de.md)).
+2. **Windows-Netzwerk → NCM-first mit automatischem RNDIS-Fallback** (`NET_MODE=auto`): NCM bindet treiberlos auf Windows 11, RNDIS deckt Windows 7–10 ab — siehe [`ARCHITECTURE.de.md`](ARCHITECTURE.de.md).
 3. **Speicher → read-only-Wegweiser + gehärtetes SMB für alle echten Daten** (Korruptionsrisiko beseitigen).
 
 Daneben eine feste Liste von Korrekturen, unabhängig von den großen Entscheidungen: dnsmasq-Gateway/DNS-Optionen unterdrücken (K1), nie beschreibbaren Speicher ausliefern (K2), alle Secrets in eine gitignorierte Config auslagern (K3), die fragile Roaming-Schleife durch einen systemd-Dienst ersetzen (K4), verwaiste statische Zeilen in `interfaces` aufräumen (K5), Samba installieren und härten (K6) und das Node-/Claude-Code-Labor zu einem optionalen, abschaltbaren Modul machen (K7).
@@ -75,13 +75,13 @@ DietPi migriert `dhclient` → `udhcpc`, was auf `ifupdown2` das Netzwerk breche
 
 ## 4. Ergebnis
 
-Das fertige Gerät wurde live an einem Windows-11-PC verifiziert: das Einstecken bringt die **RNDIS-Netzwerkkarte** hoch, das **PIPORTAL**-Read-only-Laufwerk mit seinem `.url`-Wegweiser, eine saubere **DHCP-Lease** auf `10.10.0.x` und einen erreichbaren **gehärteten SMB-Share** — während der Host sein eigenes Internet behält und SSH über `usb0` steht. Ein erneuter Installer-Lauf über eine bestehende Installation ändert nichts, was nicht geändert werden muss, und eine frische SD-Karte reproduziert den ganzen Aufbau mit einem Reboot.
+Das fertige Gerät wurde live an einem Windows-11-PC verifiziert: das Einstecken bringt die **Netzwerkkarte** (NCM auf Windows 11) hoch, das **PIPORTAL**-Read-only-Laufwerk mit seinem `.url`-Wegweiser, eine saubere **DHCP-Lease** auf `10.10.0.x` und einen erreichbaren **gehärteten SMB-Share** — während der Host sein eigenes Internet behält und SSH über `usb0` steht. Ein erneuter Installer-Lauf über eine bestehende Installation ändert nichts, was nicht geändert werden muss, und eine frische SD-Karte reproduziert den ganzen Aufbau mit einem Reboot.
 
 ---
 
 ## 5. Kompromisse und bekannte Grenzen (keine Roadmap)
 
-- **RNDIS ist die pragmatische Wahl, nicht die zukunftssichere.** Es maximiert heute die Reichweite über fremde Windows-PCs; die Branche geht zu NCM (Linux hat seinen RNDIS-Host-Treiber 2023 deaktiviert). Sollte Windows 10 je aus dem Zielfeld verschwinden, ist NCM-mit-RNDIS-Fallback der natürliche Nachfolger.
+- **NCM per Default, RNDIS als automatischer Fallback (ausgeliefert, `NET_MODE=auto`).** NCM bindet treiberlos auf Windows 11 — live verifiziert — und der Detektor fällt für Windows 7–10 (kein Inbox-NCM-Treiber) auf RNDIS zurück. RNDIS ist jetzt Fallback/Opt-in, nicht mehr der Default; das folgt der Branchenrichtung (Linux hat seinen RNDIS-Host-Treiber 2023 als unsicher deaktiviert).
 - **Single-Config** tauscht das saubere Linux/macOS-ECM-Gesicht gegen bombenfeste Windows-Bindung. ECM ist einen Config-Schalter entfernt, wenn ein Host es braucht.
 - **Read-only-Wegweiser** heißt: der Stick selbst trägt per Design nie Nutzdaten — alles Echte läuft über SMB. Das ist der ganze Sinn der Korruptions-Beseitigung, keine zu umgehende Einschränkung.
 - **512 MB RAM** werden durch zram plus ein nach Kartengröße gestaffeltes SD-Swapfile abgefedert, nicht aufgehoben; fordernde Werkzeuge laufen, aber das ist ein Zero 2 W, keine Workstation.

@@ -55,6 +55,11 @@ Erste vollständige, an Hardware verifizierte Fassung. Live an Windows 11 getest
   (`10.10.0.1\dietpi`).
 - **mDNS via avahi**, damit `\\PiPortal.local` vom Host auflöst (NetBIOS bleibt aus). Hostname wird von
   Modul 01 auf `PiPortal` gesetzt.
+- **NCM als Default mit automatischem RNDIS-Fallback** (`NET_MODE=auto`): das Windows-Netzwerk-Face kommt
+  als CDC-NCM hoch — das auf **Windows 11 treiberlos bindet** (live verifiziert: stille Karte + DHCP-Lease,
+  kein Admin) — und fällt automatisch auf RNDIS zurück, wenn der verbundene Host NCM nicht annimmt
+  (Windows 7–10). Detektor `piportal-net-detect` + `WINNCM`-os_desc; durchgängig Single-Config. RNDIS ist
+  jetzt Opt-in/Fallback, nicht mehr der Default.
 - **`piportal --poweroff`**: sauberes Herunterfahren (`sync` + `poweroff`), damit der Stick gefahrlos
   abgezogen werden kann, ohne SD-Karten-Korruption zu riskieren.
 - **`piportal start claude`**: startet die Claude Code CLI und installiert sie beim ersten Mal (neueste, kein Pin).

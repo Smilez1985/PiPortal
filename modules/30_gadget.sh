@@ -58,6 +58,9 @@ module_30_gadget() {
     install_file "${PIPORTAL_CONFIG_DIR}/piportal.conf" "${PIPORTAL_ETC}/piportal.conf" 0640
     install_file "${PIPORTAL_ASSETS_DIR}/gadget/piportal-gadget.sh" "${PIPORTAL_SBIN}/piportal-gadget.sh" 0755
     install_file "${PIPORTAL_ASSETS_DIR}/systemd/piportal-gadget.service" /etc/systemd/system/piportal-gadget.service 0644
+    # Auto-Erkennung NCM/RNDIS (Fallback) – Skript + Unit.
+    install_file "${PIPORTAL_ASSETS_DIR}/gadget/piportal-net-detect.sh" "${PIPORTAL_SBIN}/piportal-net-detect.sh" 0755
+    install_file "${PIPORTAL_ASSETS_DIR}/systemd/piportal-net-detect.service" /etc/systemd/system/piportal-net-detect.service 0644
 
     # --- 5. Aktivieren. Neustart des laufenden g_multi erfolgt erst beim Reboot ---
     systemctl daemon-reload
@@ -66,6 +69,7 @@ module_30_gadget() {
     else
         log_skip "piportal-gadget.service bereits aktiviert."
     fi
+    systemctl enable piportal-net-detect.service >/dev/null 2>&1 || true
 
     if lsmod | grep -q '^g_multi'; then
         # Migrations-Fall: Legacy-g_multi belegt den UDC.

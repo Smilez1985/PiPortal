@@ -34,7 +34,7 @@ A live recon over SSH established the ground truth before anything was changed. 
 Three architecture decisions were validated against current best practice before touching the running device (full rationale + sources in [`ARCHITECTURE.md`](ARCHITECTURE.md)):
 
 1. **Gadget technique → configfs / libcomposite** (retire `g_multi`).
-2. **Windows networking → RNDIS + MS-OS descriptors** (the widest-reaching Windows-Ethernet option; see the RNDIS/Win11 caveat in [`ARCHITECTURE.md`](ARCHITECTURE.md)).
+2. **Windows networking → NCM-first with automatic RNDIS fallback** (`NET_MODE=auto`): NCM binds driverlessly on Windows 11, RNDIS covers Windows 7–10 — see [`ARCHITECTURE.md`](ARCHITECTURE.md).
 3. **Storage → a read-only signpost + hardened SMB for all real data** (kill the corruption risk).
 
 Alongside these, a fixed list of corrections applied regardless of the big decisions: suppress the dnsmasq gateway/DNS options (K1), never ship writable storage (K2), move all secrets to a gitignored config (K3), replace the fragile roaming loop with a systemd service (K4), tidy orphaned static lines in `interfaces` (K5), install and harden Samba (K6), and make the Node/Claude-Code lab an optional, switchable module (K7).
@@ -75,13 +75,13 @@ DietPi has been migrating `dhclient` → `udhcpc`, which can break networking on
 
 ## 4. Result
 
-The finished device was verified live on a Windows 11 PC: plugging the stick in brings up the **RNDIS network adapter**, the **PIPORTAL** read-only drive with its `.url` signpost, a clean **DHCP lease** on `10.10.0.x`, and a reachable **hardened SMB share** — while the host keeps its own internet and SSH over `usb0` stays up. Re-running the installer over an existing install changes nothing it doesn't need to, and a fresh SD card reproduces the whole setup with one reboot.
+The finished device was verified live on a Windows 11 PC: plugging the stick in brings up the **network adapter** (NCM on Windows 11), the **PIPORTAL** read-only drive with its `.url` signpost, a clean **DHCP lease** on `10.10.0.x`, and a reachable **hardened SMB share** — while the host keeps its own internet and SSH over `usb0` stays up. Re-running the installer over an existing install changes nothing it doesn't need to, and a fresh SD card reproduces the whole setup with one reboot.
 
 ---
 
 ## 5. Trade-offs and known limits (not a roadmap)
 
-- **RNDIS is the pragmatic choice, not the future-proof one.** It maximizes reach across foreign Windows PCs today; the industry is moving to NCM (Linux disabled its RNDIS host driver in 2023). If Windows 10 ever leaves the target field, NCM-with-RNDIS-fallback is the natural successor.
+- **NCM by default, RNDIS as the automatic fallback (shipped, `NET_MODE=auto`).** NCM binds driverlessly on Windows 11 — verified live — and the detector falls back to RNDIS for Windows 7–10, which have no inbox NCM driver. RNDIS is now the fallback/opt-in, not the default; this follows the industry direction (Linux disabled its RNDIS host driver in 2023 as insecure).
 - **Single config** trades the tidy Linux/macOS ECM face for rock-solid Windows binding. ECM is one config flag away when a host needs it.
 - **Read-only signpost** means the stick itself never carries user data by design — everything real goes over SMB. That is the whole point of removing the corruption risk, not a limitation to work around.
 - **512 MB RAM** is mitigated, not erased, by zram plus a size-staggered SD swapfile; heavy tools run, but this is a Zero 2 W, not a workstation.

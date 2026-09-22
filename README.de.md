@@ -25,7 +25,7 @@ Gedacht ist das Ganze als **mobiles Schweizer Taschenmesser für Technikbegeiste
 
 ## Was kann PiPortal?
 
-- **Einstecken und loslegen** — das Laufwerk braucht keinen Treiber; unter Windows 7–10 und vielen Win11-PCs erscheint auch die Netzwerkkarte automatisch. (Auf aktuellem Windows 11 wird RNDIS ausgemustert und die Netzwerkseite braucht evtl. eine einmalige Treiberfreigabe mit Adminrechten — siehe [`docs/SECURITY.de.md`](docs/SECURITY.de.md).)
+- **Einstecken und loslegen** — kein Treiber, keine Installation, kein Admin: das Laufwerk braucht keinen, und die Netzwerkkarte bindet **treiberlos auf Windows 11** (per NCM) wie auch auf Windows 7–10 (automatischer RNDIS-Fallback). Die passende wird automatisch gewählt (`NET_MODE=auto`).
 - **Eigenes Internet** — der Stick hängt per WLAN an einem eigenen Netz (Router oder Handy-Hotspot) und hält die Verbindung selbst dann, wenn man den Raum wechselt.
 - **Saubere Trennung** — der Internetverkehr läuft bewusst nur über das WLAN des Sticks, nie über den PC. Dessen Verbindung bleibt komplett unberührt.
 - **Sicherer Dateiaustausch** — statt eines beschreibbaren USB-Laufwerks (das bei gleichzeitigem Zugriff kaputtgehen kann) gibt es einen schreibgeschützten „Wegweiser" und einen echten, passwortgeschützten Netzwerkordner.
@@ -129,7 +129,7 @@ PiPortal baut ein **configfs/libcomposite USB-Composite-Gadget** (Single-Config,
 
 | Funktion | Zweck | Host-Sicht |
 |---|---|---|
-| **RNDIS** (mit MS-OS-Descriptors) | USB-Netzwerk (Inbox-Treiber) | Win 7–10 & viele Win11 automatisch; aktuelles Win11 evtl. 1× Treiber mit Admin |
+| **NCM / RNDIS** (auto, MS-OS-Descriptors) | USB-Netzwerk, treiberlos (Inbox-Treiber) | Win 11 → NCM; Win 7–10 → automatischer RNDIS-Fallback |
 | **Mass Storage** (read-only FAT) | Wegweiser zum SMB-Share | alle |
 
 Der Datentausch läuft über **gehärtetes SMB** (`\\10.10.0.1\PiPortal`, SMB2+/SMB3, kein Gast). dnsmasq verteilt dem PC eine Adresse, **ohne** dessen Internet-Gateway zu kapern.
@@ -139,7 +139,7 @@ Der Datentausch läuft über **gehärtetes SMB** (`\\10.10.0.1\PiPortal`, SMB2+/
 ```
    Windows-PC                Pi Zero 2 W (PiPortal)              Uplink
   ┌───────────┐   USB       ┌──────────────────────┐   WLAN   ┌──────────┐
-  │  RNDIS-NIC│◄───────────►│ usb0  10.10.0.1/24    │          │ Router / │
+  │  USB-NIC  │◄───────────►│ usb0  10.10.0.1/24    │          │ Router / │
   │ 10.10.0.x │  DHCP vom Pi│ (DHCP-Server, kein GW)│          │ Handy-AP │
   │           │             │ wlan0 ── DHCP-Client ─┼─────────►│ Internet │
   │  \\10.10.0.1\PiPortal ──┼─► SMB (gehärtet)      │          └──────────┘

@@ -38,19 +38,19 @@ Quellen:
 
 ---
 
-## Entscheidung 2 — Single-Config RNDIS + MS-OS-Descriptors für Windows (CDC-ECM als optionale zweite Config, per Default aus)
+## Entscheidung 2 — NCM-first Single-Config mit automatischem RNDIS-Fallback (`NET_MODE=auto`)
 
-**Entscheidung: eine einzige USB-Config mit RNDIS (mit MS-OS-Descriptors) + Massenspeicher ausliefern. CDC-ECM/NCM existieren als optionale zweite Config für Linux/macOS, sind aber per Default deaktiviert (`ENABLE_ECM=0`, `ENABLE_NCM=0`).**
+**Entscheidung: das Windows-Netzwerk-Face ist eine einzige USB-Config in `c.1`. Per Default (`NET_MODE=auto`) kommt das Gadget als CDC-NCM hoch — das auf Windows 11 treiberlos bindet — und fällt automatisch auf RNDIS zurück, wenn der verbundene Host NCM nicht annimmt (älteres Windows). CDC-ECM bleibt als optionale zweite Config für Linux/macOS verfügbar.**
 
 Begründung (Ziel: „läuft an möglichst vielen *fremden* Windows-PCs mit möglichst wenig Aufwand am Host"):
-- **RNDIS + os_desc** (`compat-id RNDIS`, `sub 5162001`, Vendor-Code `0xcd`, `MSFT100`) hat die **größte Reichweite** der USB-Ethernet-Protokolle. Auf Windows 7–10 — und vielen Windows-11-Installationen — lässt Windows über die MS-OS-Descriptors seinen Inbox-Treiber „Remote NDIS Compatible Device" ohne Download laden; in unserem Windows-11-Hardwaretest band es automatisch. **Einschränkung für aktuelles Windows 11:** Microsoft mustert RNDIS als unsicher aus, und der Inbox-Treiber installiert sich auf Windows 10/11 nicht mehr *zuverlässig* automatisch. Wo nicht, braucht der Adapter eine einmalige manuelle Treiberzuweisung im Geräte-Manager — und das erfordert **Adminrechte**. Genau diese Ausmusterung ist der Hauptgrund, warum NCM der dokumentierte Nachfolger ist.
-- **Mehrere USB-Configs haben Windows in der Praxis zerlegt.** Der ursprüngliche Plan war ein Zwei-Config-Gadget (Config 1 = RNDIS für Windows, Config 2 = CDC-ECM für Linux/macOS). An echter Hardware band Windows **gar keine** Funktionstreiber — weder die Netzwerkkarte noch das Laufwerk erschienen — weil Windows Multi-Config-Geräte schlecht unterstützt und dann nichts lädt. Der Auslieferungs-Default ist deshalb eine **einzige Config** (RNDIS + Massenspeicher). ECM/NCM bleiben im Skript als opt-in zweite Config für reinen Linux/macOS-Einsatz.
-- **NCM allein schließt Windows 10 aus** (kein Inbox-Treiber → manuelle Treiberwahl mit Adminrechten); selbst auf Win11 bindet es nur mit zusätzlichem `WINNCM`-os_desc automatisch. NCM bleibt daher per Default aus.
-- Die Raspberry-Pi-**Treiber-`.exe`** braucht Adminrechte + Installation auf dem Ziel-PC → widerspricht dem Ziel „spurlos an fremden PCs".
+- **NCM bindet treiberlos auf Windows 11 — live verifiziert.** Mit einem MS-OS-Descriptor auf Gadget-Ebene plus der `WINNCM`-compatible-id der Funktion lädt Windows 11 seinen Inbox-NCM-Treiber automatisch, ohne Dialog und ohne Adminrechte. In unserem Hardwaretest brachte der Win11-Host den Adapter **still** hoch und zog eine DHCP-Lease auf `10.10.0.x`. NCM ist auch die Richtung, in die die Branche geht (Linux hat seinen RNDIS-Host-Treiber 2023 als unsicher deaktiviert; Microsoft empfiehlt NCM).
+- **RNDIS ist der automatische Fallback für ältere Windows.** Windows 7/8/10 haben keinen Inbox-NCM-Treiber, dort bleibt die NCM-Karte still. `NET_MODE=auto` erkennt das (kein `usb0`-Traffic vom verbundenen Host binnen `NET_DETECT_WAIT` Sekunden) und baut das Gadget als **RNDIS** neu, dessen Inbox-Treiber „Remote NDIS Compatible Device" auf Windows 7–10 treiberlos bindet. Ergebnis: treiberlos auf modernem *und* altem Windows.
+- **Single-Config, nie Multi-Config.** Ein früherer Zwei-Config-Plan (RNDIS + ECM) ließ Windows **gar keine** Funktionstreiber binden — es handhabt Multi-Config-Geräte schlecht. Also liegt immer genau eine Windows-Netzwerkfunktion in `c.1` (NCM oder RNDIS); ECM ist eine opt-in *separate* Config nur für Linux/macOS.
+- Die Raspberry-Pi-**Treiber-`.exe`** braucht Adminrechte + Installation auf dem Ziel-PC → widerspricht „spurlos an fremden PCs", wird also nie genutzt.
 
-Anmerkung zur Product-ID: der Identifier ist `0x1d6b:0xa4ac`. Ein früherer Wert (`…:0104`) war von einem Test-PC nach vielen Reconnects **negativ gecacht** worden, sodass Windows die MS-OS-Descriptors nicht mehr neu auswertete; eine frische Product-ID lässt den Host das Gerät als neu behandeln und „Remote NDIS Compatible Device" automatisch laden. Die os_desc/compat-IDs waren die ganze Zeit korrekt — siehe [`DESIGN_NOTES.de.md`](DESIGN_NOTES.de.md).
+`NET_MODE`: `auto` (Default — NCM, RNDIS-Fallback) · `ncm` (nur NCM) · `rndis` (nur RNDIS, opt-in). Der Laufzeit-Fallback schreibt `/run/piportal-netmode` (tmpfs, beim Reboot geleert), sodass jeder Boot zuerst wieder NCM probiert. Detektor: `assets/gadget/piportal-net-detect.sh` (Unit `piportal-net-detect.service`).
 
-Zukunftsrichtung (dokumentiert, keine Roadmap): der Branchentrend geht klar zu **NCM** (Linux hat seinen RNDIS-Host-Treiber 2023 als unsicher deaktiviert; Microsoft empfiehlt NCM). RNDIS ist die **pragmatische** 2026-Wahl für maximale Fremd-Windows-Reichweite, nicht die zukunftssichere.
+Anmerkung zur Product-ID: der Identifier ist `0x1d6b:0xa4ac`. Ein früherer Wert (`…:0104`) war von einem Test-PC nach vielen Reconnects **negativ gecacht** worden, sodass Windows die MS-OS-Descriptors nicht mehr neu auswertete; eine frische Product-ID lässt den Host das Gerät als neu behandeln — siehe [`DESIGN_NOTES.de.md`](DESIGN_NOTES.de.md).
 
 Quellen:
 - MS-OS-Descriptor / RNDIS-Ordering: https://learn.microsoft.com/en-us/answers/questions/474108/does-rndis-need-to-be-listed-as-the-first-function
@@ -97,8 +97,8 @@ Quellen:
 
 Ein **configfs-Composite-Gadget**, aufgebaut per idempotentem systemd-oneshot, mit einer **einzigen USB-Config**:
 
-1. **RNDIS** (mit MS-OS-Descriptors, Product `0x1d6b:0xa4ac`) → das Windows-Gesicht; installiert sich auf Windows 7–10 und vielen Win11-PCs automatisch, wobei aktuelles Windows 11 eine einmalige Treiberzuweisung mit Adminrechten verlangen kann (RNDIS wird ausgemustert — siehe Einschränkung oben).
+1. **NCM per Default** (`NET_MODE=auto`, MS-OS-/`WINNCM`-Descriptors, Product `0x1d6b:0xa4ac`) → das Windows-Gesicht; bindet **treiberlos auf Windows 11** (verifiziert). Automatischer **RNDIS**-Fallback deckt Windows 7–10 ab.
 2. **Massenspeicher** als **read-only-FAT16-Image** (`ro=1 removable=1`, 16 MB) → sichtbarer Wegweiser mit einer `.url` auf den SMB-Share.
-3. **CDC-ECM/NCM** → optionale zweite Config für Linux/macOS, **per Default aus** (Multi-Config zerlegt die Windows-Treiberbindung).
+3. **CDC-ECM** → optionale *separate* Config für Linux/macOS, **per Default aus** (Multi-Config zerlegt die Windows-Treiberbindung).
 
 Der eigentliche Datentausch läuft ausschließlich über **gehärtetes SMB** auf `usb0` (`10.10.0.1`). dnsmasq vergibt dem Windows-Host eine Lease, unterdrückt dabei Gateway/DNS (Optionen 3/6/15 leer) und listet die Optionen 119/121/249 bewusst **nicht** auf — dnsmasq würde sie sonst als 0-Byte-Optionen senden und Windows das gesamte DHCP-OFFER verwerfen (Landung auf APIPA). Der Host behält sein eigenes Internet; SSH über `usb0` bleibt stehen. Wie jede dieser Lösungen bei der Live-Inbetriebnahme entstand, steht in [`DESIGN_NOTES.de.md`](DESIGN_NOTES.de.md).

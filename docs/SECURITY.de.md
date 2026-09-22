@@ -23,7 +23,7 @@ PiPortal ist ein **transparentes, defensives** Administrations- und Labor-Werkze
 3. **Schreibgeschützter Wegweiser-Datenträger.** Das emulierte USB-Laufwerk wird für den Host **read-only** eingebunden (`ro=1`). Es kann nicht genutzt werden, um unbemerkt Dateien oder Schadsoftware *vom* Host über das Laufwerk auf den Pi zu kopieren.
 4. **Authentifiziertes SMB, kein Gastzugang.** Der eigentliche Datenspeicher verlangt Benutzername und Passwort (`map to guest = Never`, `restrict anonymous = 2`, `valid users`). Das bloße Einstecken des Dongles gewährt keinen Zugriff auf Dateien.
 5. **Keine hardcodierten Secrets.** Das Repository enthält keine Passwörter, API-Tokens oder privaten IP-Adressen. Jeder sensible Wert wird bei der Installation individuell eingerichtet.
-6. **Auf modernem Windows kann schon das Hochkommen der Netzwerkseite Adminrechte erfordern.** Microsoft mustert den RNDIS-Inbox-Treiber aus; auf aktuellem Windows 10/11 installiert er sich nicht mehr zuverlässig automatisch, sodass auf einem gesperrten PC ohne Adminrechte die Netzwerkkarte womöglich gar nicht erscheint. Keine absolute Barriere — auf Windows 7–10 und vielen Win11-Installationen bindet es weiterhin automatisch — aber auf die Netzwerkseite von PiPortal ist an einem gehärteten, admin-beschränkten Host kein Verlass für heimliches Andocken.
+6. **Die Netzwerkseite ist treiberlos — ein Usability-Merkmal, keine Sicherheitsbarriere.** NCM bindet auf Windows 11 ohne Admin, RNDIS auf Windows 7–10; PiPortal verlässt sich also *nicht* darauf, dass dem Host ein Treiber fehlt, um Missbrauch zu begrenzen. Die tatsächlich einschränkenden Barrieren sind die Punkte 1–5 oben.
 
 ---
 

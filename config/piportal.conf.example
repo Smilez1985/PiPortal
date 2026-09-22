@@ -46,9 +46,13 @@ GADGET_SERIAL=""
 # NICHT sauber bindet (keine Treiber für die Funktionen). Für Windows-Hosts
 # daher nur RNDIS (Single-Config). ECM nur aktivieren, wenn der Host Linux/macOS
 # ist – dann RNDIS besser ausschalten.
-ENABLE_RNDIS="1"                    # Windows-Netzwerk (treiberlos)
-ENABLE_ECM="0"                      # Linux/macOS-Netzwerk – für Windows AUS lassen
-ENABLE_NCM="0"                      # nur Windows 11 – vorerst aus
+NET_MODE="auto"                     # auto | ncm | rndis  (Windows-Netzwerk-Face in c.1)
+                                    #   auto  = NCM zuerst (treiberlos auf Win11), Fallback
+                                    #           auf RNDIS, wenn der Host NCM nicht annimmt
+                                    #   ncm   = nur NCM (modern, WINNCM-os_desc)
+                                    #   rndis = nur RNDIS (Opt-in; breiteste Alt-Reichweite)
+NET_DETECT_WAIT="20"                # Sekunden auf NCM-Annahme warten, dann RNDIS-Fallback
+ENABLE_ECM="0"                      # optionales Linux/macOS-Face – für Windows AUS lassen
 ENABLE_MASS_STORAGE="1"             # read-only Wegweiser-Datenträger
 
 # --------------------------------------------------------------------- WLAN --

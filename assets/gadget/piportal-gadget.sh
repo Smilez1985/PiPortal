@@ -106,36 +106,53 @@ gadget_up() {
     echo "$GADGET_MANUFACTURER" > "${G}/strings/0x409/manufacturer"
     echo "$GADGET_PRODUCT"      > "${G}/strings/0x409/product"
 
-    # --- MS-OS-Descriptors auf Gadget-Ebene (für RNDIS-Auto-Bind unter Windows).
-    if [ "$ENABLE_RNDIS" = "1" ]; then
-        echo 1        > "${G}/os_desc/use"
-        echo 0xcd     > "${G}/os_desc/b_vendor_code"
-        echo "MSFT100" > "${G}/os_desc/qw_sign"
+    # --- Primäres Netzwerk-Face bestimmen (Single-Config in c.1) --------------
+    # NET_MODE: rndis | ncm | auto. 'auto' startet mit NCM (modern); der
+    # Fallback-Monitor (piportal-net-detect) schaltet bei ausbleibender
+    # DHCP-Lease auf RNDIS. Rückwärtskompatibel aus ENABLE_NCM, falls NET_MODE leer.
+    local net_mode="${NET_MODE:-}"
+    # Laufzeit-Override (vom Auto-Detect-Fallback) hat Vorrang vor der Config.
+    [ -r /run/piportal-netmode ] && net_mode="$(cat /run/piportal-netmode 2>/dev/null)"
+    if [ -z "$net_mode" ]; then
+        if [ "${ENABLE_NCM:-0}" = "1" ]; then net_mode="ncm"; else net_mode="rndis"; fi
     fi
+    local primary_net="rndis"
+    case "$net_mode" in ncm|auto) primary_net="ncm" ;; esac
 
-    local dev_mac host_mac
+    # MS-OS-Descriptors auf Gadget-Ebene (Windows-Auto-Bind für RNDIS UND NCM).
+    echo 1         > "${G}/os_desc/use"
+    echo 0xcd      > "${G}/os_desc/b_vendor_code"
+    echo "MSFT100" > "${G}/os_desc/qw_sign"
+
+    local dev_mac host_mac primary_func
     dev_mac="$(derive_mac dev)"
     host_mac="$(derive_mac host)"
 
     # ------------------------------------------------------------ Funktionen --
-    # RNDIS zuerst anlegen (Interface-Reihenfolge: Windows erwartet RNDIS vorn).
-    if [ "$ENABLE_RNDIS" = "1" ]; then
-        mkdir -p "${G}/functions/rndis.usb0"
-        echo "$dev_mac"  > "${G}/functions/rndis.usb0/dev_addr"
-        echo "$host_mac" > "${G}/functions/rndis.usb0/host_addr"
-        # Compat-IDs, damit Windows den RNDIS-6.0-Inbox-Treiber lädt.
-        echo "RNDIS"    > "${G}/functions/rndis.usb0/os_desc/interface.rndis/compatible_id"
-        echo "5162001"  > "${G}/functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id"
-    fi
-    if [ "$ENABLE_ECM" = "1" ]; then
-        mkdir -p "${G}/functions/ecm.usb0"
-        echo "$dev_mac"  > "${G}/functions/ecm.usb0/dev_addr"
-        echo "$host_mac" > "${G}/functions/ecm.usb0/host_addr"
-    fi
-    if [ "$ENABLE_NCM" = "1" ]; then
+    if [ "$primary_net" = "ncm" ]; then
+        # NCM als Windows-Face. WINNCM-os_desc, damit Windows 11 den Inbox-NCM-
+        # Treiber automatisch lädt (ohne: CM_PROB_FAILED_INSTALL).
         mkdir -p "${G}/functions/ncm.usb0"
         echo "$dev_mac"  > "${G}/functions/ncm.usb0/dev_addr"
         echo "$host_mac" > "${G}/functions/ncm.usb0/host_addr"
+        echo "WINNCM" > "${G}/functions/ncm.usb0/os_desc/interface.ncm/compatible_id" 2>/dev/null \
+            || log "WARN: NCM os_desc konnte nicht gesetzt werden (Kernel?) – Win11 bindet evtl. nicht automatisch."
+        primary_func="ncm.usb0"
+    else
+        # RNDIS als Windows-Face (breiteste Reichweite, Win7–10 + viele Win11).
+        mkdir -p "${G}/functions/rndis.usb0"
+        echo "$dev_mac"  > "${G}/functions/rndis.usb0/dev_addr"
+        echo "$host_mac" > "${G}/functions/rndis.usb0/host_addr"
+        echo "RNDIS"    > "${G}/functions/rndis.usb0/os_desc/interface.rndis/compatible_id"
+        echo "5162001"  > "${G}/functions/rndis.usb0/os_desc/interface.rndis/sub_compatible_id"
+        primary_func="rndis.usb0"
+    fi
+
+    # Optionales zweites Face: CDC-ECM (Linux/macOS). Standard aus.
+    if [ "${ENABLE_ECM:-0}" = "1" ]; then
+        mkdir -p "${G}/functions/ecm.usb0"
+        echo "$dev_mac"  > "${G}/functions/ecm.usb0/dev_addr"
+        echo "$host_mac" > "${G}/functions/ecm.usb0/host_addr"
     fi
     if [ "$ENABLE_MASS_STORAGE" = "1" ]; then
         mkdir -p "${G}/functions/mass_storage.0"
@@ -156,24 +173,21 @@ gadget_up() {
     fi
 
     # ---------------------------------------------------------------- Configs --
-    # Config 1 = RNDIS (Windows) + Mass Storage. Muss die OS-Descriptor-Config sein.
+    # Config 1 = primäres Netzwerk-Face (${primary_func}) + Mass Storage. Trägt die
+    # OS-Descriptors. Single-Config – Multi-Config zerlegt die Windows-Bindung.
     mkdir -p "${G}/configs/c.1/strings/0x409"
-    echo "PiPortal RNDIS" > "${G}/configs/c.1/strings/0x409/configuration"
+    echo "PiPortal ${primary_net}" > "${G}/configs/c.1/strings/0x409/configuration"
     echo 250 > "${G}/configs/c.1/MaxPower"
-    if [ "$ENABLE_RNDIS" = "1" ]; then
-        ln -sf "${G}/functions/rndis.usb0" "${G}/configs/c.1/rndis.usb0"
-        # OS-Descriptor auf Config 1 zeigen lassen.
-        ln -sf "${G}/configs/c.1" "${G}/os_desc/c.1"
-    fi
+    ln -sf "${G}/functions/${primary_func}" "${G}/configs/c.1/${primary_func}"
+    ln -sf "${G}/configs/c.1" "${G}/os_desc/c.1"
     [ "$ENABLE_MASS_STORAGE" = "1" ] && ln -sf "${G}/functions/mass_storage.0" "${G}/configs/c.1/mass_storage.0"
 
-    # Config 2 = ECM/NCM (Linux/macOS) + Mass Storage.
-    if [ "$ENABLE_ECM" = "1" ] || [ "$ENABLE_NCM" = "1" ]; then
+    # Config 2 = optional CDC-ECM (Linux/macOS) + Mass Storage. Standard aus.
+    if [ "${ENABLE_ECM:-0}" = "1" ]; then
         mkdir -p "${G}/configs/c.2/strings/0x409"
-        echo "PiPortal CDC" > "${G}/configs/c.2/strings/0x409/configuration"
+        echo "PiPortal CDC-ECM" > "${G}/configs/c.2/strings/0x409/configuration"
         echo 250 > "${G}/configs/c.2/MaxPower"
-        [ "$ENABLE_ECM" = "1" ] && ln -sf "${G}/functions/ecm.usb0" "${G}/configs/c.2/ecm.usb0"
-        [ "$ENABLE_NCM" = "1" ] && ln -sf "${G}/functions/ncm.usb0" "${G}/configs/c.2/ncm.usb0"
+        ln -sf "${G}/functions/ecm.usb0" "${G}/configs/c.2/ecm.usb0"
         [ "$ENABLE_MASS_STORAGE" = "1" ] && ln -sf "${G}/functions/mass_storage.0" "${G}/configs/c.2/mass_storage.0"
     fi
 

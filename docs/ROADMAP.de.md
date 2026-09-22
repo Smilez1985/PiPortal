@@ -13,10 +13,6 @@ Die größere Vision hinter PiPortal ist eine abgeschottete, überallhin mitnehm
 - **Kuratierter Admin-Werkzeugkasten** — ein definierter Satz portabler Admin-/Entwicklungswerkzeuge für die isolierte Umgebung (Dateitransfer, Disk-/Hardware-Info, Terminal-Helfer), sodass der Stick ein einsatzfertiger Kasten ist statt eines nackten OS. (Heute legt der Nutzer seine portablen Tools selbst auf den Share.)
 - **Vollständigere Cowork-Integration** — eine vorkonfigurierte Cowork-/KI-Coding-Umgebung im isolierten Raum, sodass der Stick zugleich eine portable KI-Workstation ist. *(Die Claude Code CLI selbst installiert und startet bereits via `piportal start claude` — in 1.0.0 ausgeliefert; dieser Punkt ist das reichere, vorkonfigurierte Setup.)*
 
-## Netzwerk
-
-- **Optionales NCM-Profil** für reine Windows-11-Umgebungen (besserer Durchsatz als RNDIS). RNDIS bleibt der Default für maximale Reichweite über ältere Windows; NCM wäre ein opt-in Profil — siehe die Zukunftsnotiz in [`ARCHITECTURE.de.md`](ARCHITECTURE.de.md).
-
 ## Speicher
 
 - **Automatischer Publish-Zyklus** für das Wegweiser-Image (`forced_eject` → `lun.0/file` tauschen), damit Inhaltsänderungen auf dem read-only-Datenträger sauber zum Host durchschlagen, ohne Reconnect.

@@ -1,0 +1,14 @@
+[Unit]
+Description=PiPortal Auto-Erkennung NCM/RNDIS (Fallback bei älteren Hosts)
+Documentation=file:/usr/local/sbin/piportal-net-detect.sh
+# Erst nach dem Gadget-Aufbau; usb0 erscheint kurz danach (das Skript wartet).
+After=piportal-gadget.service network-pre.target
+Wants=piportal-gadget.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/piportal-net-detect.sh
+
+[Install]
+WantedBy=multi-user.target

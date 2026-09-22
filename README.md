@@ -25,7 +25,7 @@ The whole thing is meant to be a **mobile Swiss Army knife for tech enthusiasts 
 
 ## What can PiPortal do?
 
-- **Plug in and go** — the drive needs no driver at all; on Windows 7–10 and many Windows 11 PCs the network adapter appears automatically too. (On current Windows 11, RNDIS is being phased out and the network side may need a one-time driver activation with admin rights — see [`docs/SECURITY.md`](docs/SECURITY.md).)
+- **Plug in and go** — no driver, no installation, no admin: the drive needs none, and the network adapter binds **driverlessly on Windows 11** (via NCM) as well as on Windows 7–10 (automatic RNDIS fallback). The right one is picked automatically (`NET_MODE=auto`).
 - **Its own internet** — the stick connects over Wi-Fi to its own network (router or phone hotspot) and keeps the connection even when you move to another room.
 - **Clean separation** — internet traffic deliberately runs only over the stick's Wi-Fi, never over the PC. The PC's connection stays completely unaffected.
 - **Secure file exchange** — instead of a writable USB drive (which can get corrupted when accessed simultaneously), there's a read-only "signpost" and a real, password-protected network folder.
@@ -130,7 +130,7 @@ PiPortal builds a **configfs/libcomposite USB composite gadget** (single-config,
 
 | Function | Purpose | Host view |
 |---|---|---|
-| **RNDIS** (with MS-OS descriptors) | USB networking (inbox driver) | Win 7–10 & many Win11 auto; current Win11 may need a 1-time admin driver step |
+| **NCM / RNDIS** (auto, MS-OS descriptors) | USB networking, driverless (inbox driver) | Win 11 → NCM; Win 7–10 → automatic RNDIS fallback |
 | **Mass Storage** (read-only FAT) | Signpost to the SMB share | all |
 
 File exchange runs over **hardened SMB** (`\\10.10.0.1\PiPortal`, SMB2+/SMB3, no guest). dnsmasq hands the PC an address **without** hijacking its internet gateway.
@@ -140,7 +140,7 @@ File exchange runs over **hardened SMB** (`\\10.10.0.1\PiPortal`, SMB2+/SMB3, no
 ```
    Windows PC                Pi Zero 2 W (PiPortal)              Uplink
   ┌───────────┐   USB       ┌──────────────────────┐   Wi-Fi  ┌──────────┐
-  │  RNDIS NIC│◄───────────►│ usb0  10.10.0.1/24    │          │ Router / │
+  │  USB NIC  │◄───────────►│ usb0  10.10.0.1/24    │          │ Router / │
   │ 10.10.0.x │  DHCP from Pi│ (DHCP server, no GW) │          │ phone AP │
   │           │             │ wlan0 ── DHCP client ─┼─────────►│ Internet │
   │  \\10.10.0.1\PiPortal ──┼─► SMB (hardened)      │          └──────────┘
