@@ -21,7 +21,9 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MODULE_DIR="${MODULE_DIR:-${SCRIPT_DIR}/modules}"
 export LOG_FILE="${LOG_FILE:-/var/log/piportal-update.log}"
 export BACKUP_DIR="${BACKUP_DIR:-/var/backups/piportal-update}"
-export DRY_RUN="${DRY_RUN:-0}"
+# DRY_RUN strikt auf 0/1 normalisieren (sonst zeigt ${DRY_RUN:+…} auch bei "0" an).
+case "${DRY_RUN:-0}" in 1|true|yes|on) DRY_RUN=1 ;; *) DRY_RUN=0 ;; esac
+export DRY_RUN
 export REBOOT_FLAG="${REBOOT_FLAG:-/run/piportal-reboot-required}"
 
 LOG_TAG="ORCHESTRATOR"
@@ -48,8 +50,12 @@ motd_clear() { sudo rm -f "$MOTD_DROPIN" 2>/dev/null || true; }
 # --- Start ---
 clear_reboot_flag
 motd_write "PiPortal-Update laeuft – bitte warten, bis es abgeschlossen ist."
-log "=== PiPortal-Updateroutine gestartet${DRY_RUN:+ (TROCKENLAUF)} ==="
-[ "$DRY_RUN" = "1" ] && log "TROCKENLAUF -- es wird nichts veraendert"
+if [ "$DRY_RUN" = "1" ]; then
+    log "=== PiPortal-Updateroutine gestartet (TROCKENLAUF) ==="
+    log "TROCKENLAUF -- es wird nichts veraendert"
+else
+    log "=== PiPortal-Updateroutine gestartet ==="
+fi
 log "Module: ${MODULES}  | Reboot-Modus: ${UPDATE_REBOOT_MODE}"
 
 failed=0
