@@ -55,6 +55,8 @@ Erste vollständige, an Hardware verifizierte Fassung. Live an Windows 11 getest
   (`10.10.0.1\dietpi`).
 - **mDNS via avahi**, damit `\\PiPortal.local` vom Host auflöst (NetBIOS bleibt aus). Hostname wird von
   Modul 01 auf `PiPortal` gesetzt.
+- **`piportal --poweroff`**: sauberes Herunterfahren (`sync` + `poweroff`), damit der Stick gefahrlos
+  abgezogen werden kann, ohne SD-Karten-Korruption zu riskieren.
 - **`piportal start claude`**: startet die Claude Code CLI und installiert sie beim ersten Mal (neueste, kein Pin).
 - **Gadget-Default korrigiert** auf `portal.img` (war ein veraltetes `.iso`), damit der read-only-Wegweiser einen Reboot übersteht.
 

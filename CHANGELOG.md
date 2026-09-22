@@ -54,6 +54,8 @@ First complete, hardware-verified release. Live-tested on Windows 11: the RNDIS 
   also placed on the share (H:) and notes the Windows login form (`10.10.0.1\dietpi`).
 - **mDNS via avahi** so `\\PiPortal.local` resolves from the host (NetBIOS stays off). Hostname set to
   `PiPortal` by module 01.
+- **`piportal --poweroff`**: clean shutdown (`sync` + `poweroff`) so the stick can be unplugged safely
+  without risking SD-card corruption.
 - **`piportal start claude`**: launches the Claude Code CLI, installing it (latest, no pin) on first use.
 - **Gadget default corrected** to `portal.img` (was a stale `.iso`) so the read-only signpost survives a reboot.
 

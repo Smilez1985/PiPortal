@@ -165,6 +165,19 @@ cmd_update() {
 }
 
 # ==============================================================================
+#  --poweroff   (sauber herunterfahren, dann gefahrlos abziehen)
+# ==============================================================================
+cmd_poweroff() {
+    echo "${YL}${B}PiPortal fährt sauber herunter${R} – danach kannst du gefahrlos abziehen."
+    sync
+    # Hinweis: 'shutdown now' OHNE -h ginge auf manchen Systemen nur in den
+    # Wartungsmodus. poweroff / -h schaltet zuverlässig aus.
+    _sudo systemd-run --no-block systemctl poweroff >/dev/null 2>&1 \
+        || _sudo shutdown -h now 2>/dev/null \
+        || _sudo poweroff
+}
+
+# ==============================================================================
 #  --smb-passwd   (Netzlaufwerk-Passwort SETZEN/aendern – keine Daten geloescht)
 #  Fuer die Erst-Einrichtung und spaetere Passwortwechsel.
 # ==============================================================================
@@ -321,6 +334,7 @@ ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
   ${CY}piportal --wifi-switch next${R}  Zum nächsten konfigurierten WLAN rotieren
   ${CY}piportal --wifi-switch <id>${R}  Gezielt zu WLAN-ID wechseln
   ${CY}piportal --update${R}         dietpi-update + apt upgrade + Reboot (mit -y ohne Rückfrage)
+  ${CY}piportal --poweroff${R}       Sauber herunterfahren (danach gefahrlos abziehen)
   ${CY}piportal --smb-passwd${R}     Netzlaufwerk-Passwort setzen/ändern (Erst-Einrichtung, keine Daten weg)
   ${CY}piportal --smb-reset${R}      Netzlaufwerk-Zugang zurücksetzen (löscht Share-Inhalt!)
   ${CY}piportal start claude${R}     Claude Code CLI starten (installiert sie automatisch, falls nötig)
@@ -335,6 +349,7 @@ case "${1:-}" in
     --status|status|-s)        cmd_status ;;
     --wifi-switch|wifi-switch|-w) shift 2>/dev/null; cmd_wifi_switch "${1:-}" ;;
     --update|update|-u)        shift 2>/dev/null; cmd_update "${1:-}" ;;
+    --poweroff|poweroff|off)   cmd_poweroff ;;
     --smb-passwd|smb-passwd)   cmd_smb_passwd ;;
     --smb-reset|smb-reset)     cmd_smb_reset ;;
     start|--start)             shift 2>/dev/null

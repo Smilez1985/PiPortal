@@ -21,6 +21,14 @@ Die größere Vision hinter PiPortal ist eine abgeschottete, überallhin mitnehm
 
 - **Automatischer Publish-Zyklus** für das Wegweiser-Image (`forced_eject` → `lun.0/file` tauschen), damit Inhaltsänderungen auf dem read-only-Datenträger sauber zum Host durchschlagen, ohne Reconnect.
 
+## Robustheit (Zieh-Sicherheit)
+
+- **Read-only-/Overlay-Root**, damit ein harter Stromabschnitt — den Stick einfach abziehen — das OS nicht
+  beschädigen kann. Der Haken (der genau bei dieser Design-Frage auftauchte): ein naives Overlay macht
+  *alles* flüchtig, also muss der **beschreibbare SMB-Share auf eine separate, vom Overlay ausgenommene
+  Partition**, sonst wäre er nach jedem Reboot leer. Das ist ein größerer Umbau — daher Roadmap, nicht
+  ausgeliefert. Bis dahin: `piportal --poweroff` fährt vor dem Abziehen sauber herunter.
+
 ## Qualität
 
 - **shellcheck-CI** (GitHub Actions) über alle Shell-Skripte, als leichtgewichtige Absicherung gegen Regressionen.
