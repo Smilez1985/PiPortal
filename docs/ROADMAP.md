@@ -2,7 +2,7 @@
 
 # PiPortal — Roadmap
 
-The core project (1.0.0) is complete and hardware-verified. The items below are **planned directions and ideas**, not commitments or dates. They describe where PiPortal is meant to grow; nothing here is shipped yet.
+The core project (1.0.0) is complete and hardware-verified. The items below are **planned directions and ideas**, not commitments or dates — they describe where PiPortal is meant to grow. What has already shipped is recorded in the [`CHANGELOG.md`](../CHANGELOG.md) with its date.
 
 ---
 
@@ -10,8 +10,8 @@ The core project (1.0.0) is complete and hardware-verified. The items below are 
 
 The bigger vision behind PiPortal is a self-contained, carry-anywhere workbench:
 
-- **Curated admin toolbox** — a defined set of administration/development tools available inside the isolated environment (file transfer, terminal, and similar day-to-day helpers), so the stick is a ready-to-use kit rather than a bare OS.
-- **Cowork / Claude integration** — pull an AI-coding environment (Cowork / Claude Code CLI) into the isolated space so the stick doubles as a portable AI workstation that never touches the host. The Claude Code CLI is already optionally installable today (`ENABLE_CLAUDE_CODE=1`, off by default); the plan is a fuller, preconfigured setup.
+- **Curated admin toolbox** — a defined set of portable admin/dev tools staged for the isolated environment (file transfer, disk/hardware info, terminal helpers), so the stick is a ready-to-use kit rather than a bare OS. (Today the user drops their own portable tools onto the share.)
+- **Fuller Cowork integration** — a preconfigured Cowork/AI-coding environment in the isolated space so the stick doubles as a portable AI workstation. *(The Claude Code CLI itself already installs and launches via `piportal start claude` — shipped in 1.0.0; this item is the richer, preconfigured setup.)*
 
 ## Networking
 

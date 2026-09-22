@@ -2,7 +2,7 @@
 
 # PiPortal — Roadmap
 
-Das Kernprojekt (1.0.0) ist abgeschlossen und an Hardware verifiziert. Die Punkte unten sind **geplante Richtungen und Ideen**, keine Zusagen und keine Termine. Sie beschreiben, wohin PiPortal wachsen soll; nichts davon ist bereits ausgeliefert.
+Das Kernprojekt (1.0.0) ist abgeschlossen und an Hardware verifiziert. Die Punkte unten sind **geplante Richtungen und Ideen**, keine Zusagen und keine Termine — sie beschreiben, wohin PiPortal wachsen soll. Was bereits ausgeliefert ist, steht mit Datum im [`CHANGELOG.de.md`](../CHANGELOG.de.md).
 
 ---
 
@@ -10,8 +10,8 @@ Das Kernprojekt (1.0.0) ist abgeschlossen und an Hardware verifiziert. Die Punkt
 
 Die größere Vision hinter PiPortal ist eine abgeschottete, überallhin mitnehmbare Werkbank:
 
-- **Kuratierter Admin-Werkzeugkasten** — ein definierter Satz an Administrations-/Entwicklungswerkzeugen in der isolierten Umgebung (Dateitransfer, Terminal und ähnliche Alltagshelfer), sodass der Stick ein einsatzfertiger Kasten ist statt eines nackten OS.
-- **Cowork-/Claude-Integration** — eine KI-Coding-Umgebung (Cowork / Claude Code CLI) in den isolierten Raum ziehen, sodass der Stick zugleich eine portable KI-Workstation ist, die den Host nicht anrührt. Die Claude Code CLI ist heute schon optional installierbar (`ENABLE_CLAUDE_CODE=1`, per Default aus); geplant ist ein vollständigeres, vorkonfiguriertes Setup.
+- **Kuratierter Admin-Werkzeugkasten** — ein definierter Satz portabler Admin-/Entwicklungswerkzeuge für die isolierte Umgebung (Dateitransfer, Disk-/Hardware-Info, Terminal-Helfer), sodass der Stick ein einsatzfertiger Kasten ist statt eines nackten OS. (Heute legt der Nutzer seine portablen Tools selbst auf den Share.)
+- **Vollständigere Cowork-Integration** — eine vorkonfigurierte Cowork-/KI-Coding-Umgebung im isolierten Raum, sodass der Stick zugleich eine portable KI-Workstation ist. *(Die Claude Code CLI selbst installiert und startet bereits via `piportal start claude` — in 1.0.0 ausgeliefert; dieser Punkt ist das reichere, vorkonfigurierte Setup.)*
 
 ## Netzwerk
 
