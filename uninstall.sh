@@ -11,6 +11,8 @@
 #     sudo ./uninstall.sh --list           verfügbare Backups anzeigen
 # =============================================================================
 set -euo pipefail
+# Deterministische, sprachunabhaengige Werkzeug-Ausgaben (Parsing sicher auf jedem Sprach-OS).
+export LC_ALL=C.UTF-8
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
@@ -104,6 +106,9 @@ remove_portal_image() {
     else
         log_skip "Kein Portal-Image vorhanden ($img)."
     fi
+    # Generiertes Signpost-Staging mitentfernen (Wegweiser-Quelle, KEIN Nutzerdatum).
+    local sp; sp="$(dirname "$img")/signpost"
+    [ -d "$sp" ] && { rm -rf "$sp"; log_ok "Signpost-Quelle entfernt: $sp"; }
 }
 
 purge_files() {
@@ -115,6 +120,7 @@ purge_files() {
         /etc/systemd/system/piportal-wifi-roam.service \
         /usr/local/sbin/piportal-gadget.sh \
         /usr/local/sbin/piportal-net-detect.sh \
+        /usr/local/sbin/piportal-publish.sh \
         /usr/local/sbin/piportal-wifi-roam.sh \
         /usr/local/bin/piportal \
         /etc/profile.d/piportal-aliases.sh \

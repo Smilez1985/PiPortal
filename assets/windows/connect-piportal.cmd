@@ -2,10 +2,11 @@
 REM ===========================================================================
 REM  PiPortal - SSH-Schnellverbindung vom Windows-PC
 REM  Nutzt das in Windows 10/11 enthaltene OpenSSH (ssh.exe) - kein PuTTY noetig.
+REM  Benutzer/IP werden beim Einrichten aus der PiPortal-Config eingesetzt.
 REM ===========================================================================
 setlocal
-set PIPORTAL_IP=10.10.0.1
-set PIPORTAL_USER=dietpi
+set PIPORTAL_IP=${PP_IP}
+set PIPORTAL_USER=${PP_USER}
 
 echo.
 echo   Verbinde mit PiPortal (%PIPORTAL_USER%@%PIPORTAL_IP%) ...

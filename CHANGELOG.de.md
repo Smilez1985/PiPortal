@@ -4,6 +4,49 @@
 
 Alle nennenswerten Änderungen an PiPortal. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [1.1.0] — 2026-09-22 06:41 CEST
+
+Folgearbeiten nach der ersten Hardware-Fassung, alle live am Gerät verifiziert.
+
+### Hinzugefügt
+- **`piportal --publish`** + Publish-Helfer (`assets/gadget/piportal-publish.sh`): baut das
+  Wegweiser-Image aus dem persistenten Signpost-Staging (`/srv/piportal/signpost`) neu und legt
+  es am Host per `forced_eject` sauber neu ein — geänderte Inhalte erscheinen **ohne
+  Aus-/Einstecken**. Modul 40 nutzt denselben Helfer (genau ein Weg, keine Doppel-Logik).
+- **Zweisprachiger Wegweiser**: englische `readme.txt` neben der `LIESMICH.txt` und eine
+  zweisprachige, einklappbare `README.md` (DE/EN über `<details>`) auf Wegweiser-Laufwerk und Share.
+- **`docs/INSTALL.de.md` / `docs/INSTALL.md`** — ausführliche Installationsanleitung
+  (Voraussetzungen, DietPi-Vorbereitung, WLAN-Modell, Abhängigkeiten, Verifikation). Der
+  README-Installationsabschnitt wurde entsprechend korrigiert (WLAN-Modell klargestellt,
+  USB-OTG-Kabel als Alternative zum GeeekPi-Aufsatz).
+
+### Geändert
+- **WLAN-Roaming leitet das Heimnetz aus dem OS ab**: der Roaming-Dienst bestimmt das bevorzugte
+  Netz (für den aktiven Rückwechsel) jetzt **live aus der höchsten `priority` in der
+  `wpa_supplicant.conf`** statt aus einem festen Config-Wert. Das OS bleibt einzige Wahrheitsquelle
+  (Netze, Passwörter, Reihenfolge); in DietPi hinzugefügte/umsortierte Netze greifen ohne Zutun,
+  kein Watcher, keine Überschreibung. `WIFI_HOME_SSID` in der Config bleibt optionaler Override.
+- **SMB-Passwort — ein Werkzeug für beide Fälle**: `piportal --smb-passwd` erkennt den Zustand
+  selbst (Passwort nicht gesetzt → Erst-Einrichtung ohne Datenverlust; bereits gesetzt →
+  Zurücksetzen). Die zwei früheren VBS (`SMB-Passwort_setzen.vbs` / `SMB-Passwort_vergessen.vbs`)
+  sind zu einer `SMB-Passwort.vbs` zusammengeführt; `--smb-reset` bleibt als Alias erhalten.
+- **Benutzername nicht mehr hart verdrahtet**: die Wegweiser-/Windows-Dateien nutzen echte
+  Variablen (`${PP_USER}` / `${PP_IP}` / `${PP_SHARE}`), die der Installer per `envsubst` aus der
+  Config rendert. `SMB_USER` wird — falls in der Config leer — aus dem OS bzw. Dateipfad abgeleitet
+  (`SUDO_USER` → `logname` → Repo-Eigentümer), nie root. `gettext-base` als Abhängigkeit ergänzt.
+
+### Härtung
+- **Sprachunabhängig**: `export LC_ALL=C.UTF-8` in allen parsenden Skripten (Installer, CLI,
+  Roaming-/Publish-/Net-Detect-Helfer, Updater) → deterministisches Parsen auf englischem wie
+  deutschem DietPi, kein Crash durch lokalisierte Werkzeug-Ausgaben.
+- **CRLF für Windows-Dateien**: der Render-Schritt gibt alle Wegweiser-/Share-Dateien mit CRLF
+  aus; `.gitattributes` um `*.vbs` und die Portal-Texte (`LIESMICH.txt`, `readme.txt`) ergänzt.
+  Alle Shell-Skripte bleiben LF ohne BOM (verifiziert).
+- **shellcheck-CI** (GitHub Actions) über alle Shell-Skripte als leichtgewichtiger
+  Regressionsschutz.
+
+---
+
 ## [1.0.0] — 2026-09-22
 
 Erste vollständige, an Hardware verifizierte Fassung. Live an Windows 11 getestet: RNDIS-Adapter, das `PIPORTAL`-Read-only-Laufwerk, eine DHCP-Lease auf `10.10.0.x` und der gehärtete SMB-Share kommen alle hoch, während der Host sein eigenes Internet behält und SSH über `usb0` erreichbar bleibt.

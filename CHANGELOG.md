@@ -4,6 +4,47 @@
 
 All notable changes to PiPortal. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning per [SemVer](https://semver.org/).
 
+## [1.1.0] — 2026-09-22 06:41 CEST
+
+Follow-up work after the first hardware release, all verified live on the device.
+
+### Added
+- **`piportal --publish`** + publish helper (`assets/gadget/piportal-publish.sh`): rebuilds the
+  signpost image from the persistent signpost staging (`/srv/piportal/signpost`) and re-inserts it
+  at the host cleanly via `forced_eject` — changed content appears **without unplugging**. Module 40
+  uses the same helper (exactly one path, no duplicated logic).
+- **Bilingual signpost**: an English `readme.txt` alongside `LIESMICH.txt`, plus a bilingual,
+  collapsible `README.md` (DE/EN via `<details>`) on both the signpost drive and the share.
+- **`docs/INSTALL.md` / `docs/INSTALL.de.md`** — a full installation guide (requirements, DietPi
+  preparation, Wi-Fi model, dependencies, verification). The README install section was corrected
+  accordingly (Wi-Fi model clarified, USB-OTG cable noted as an alternative to the GeeekPi adapter).
+
+### Changed
+- **Wi-Fi roaming derives the home network from the OS**: the roaming service now determines the
+  preferred network (for the active switch-back) **live from the highest `priority` in
+  `wpa_supplicant.conf`** instead of a fixed config value. The OS stays the single source of truth
+  (networks, passwords, order); networks added/reordered in DietPi take effect on their own — no
+  watcher, no overwrite. `WIFI_HOME_SSID` in the config remains an optional override.
+- **SMB password — one tool for both cases**: `piportal --smb-passwd` detects the state itself
+  (no password set → first-time setup with no data loss; already set → reset). The two former VBS
+  files (`SMB-Passwort_setzen.vbs` / `SMB-Passwort_vergessen.vbs`) are merged into one
+  `SMB-Passwort.vbs`; `--smb-reset` remains as an alias.
+- **User name no longer hardcoded**: the signpost/Windows files use real variables
+  (`${PP_USER}` / `${PP_IP}` / `${PP_SHARE}`) that the installer renders from the config via
+  `envsubst`. `SMB_USER` is — if left empty in the config — derived from the OS or file path
+  (`SUDO_USER` → `logname` → repo owner), never root. `gettext-base` added as a dependency.
+
+### Hardening
+- **Locale-independent**: `export LC_ALL=C.UTF-8` in all parsing scripts (installer, CLI,
+  roaming/publish/net-detect helpers, updater) → deterministic parsing on English as well as German
+  DietPi, no crash from localized tool output.
+- **CRLF for Windows files**: the render step emits all signpost/share files with CRLF;
+  `.gitattributes` extended with `*.vbs` and the portal texts (`LIESMICH.txt`, `readme.txt`). All
+  shell scripts remain LF without BOM (verified).
+- **shellcheck CI** (GitHub Actions) across all shell scripts as a lightweight regression guard.
+
+---
+
 ## [1.0.0] — 2026-09-22
 
 First complete, hardware-verified release. Live-tested on Windows 11: the RNDIS adapter, the `PIPORTAL` read-only drive, a DHCP lease on `10.10.0.x`, and the hardened SMB share all come up, while the host keeps its own internet and SSH over `usb0` stays available.

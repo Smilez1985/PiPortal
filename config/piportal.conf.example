@@ -56,7 +56,18 @@ ENABLE_ECM="0"                      # optionales Linux/macOS-Face – für Windo
 ENABLE_MASS_STORAGE="1"             # read-only Wegweiser-Datenträger
 
 # --------------------------------------------------------------------- WLAN --
+# EMPFEHLUNG: WLAN in DietPi verwalten (dietpi-config / dietpi-wifi.txt) und die
+# Felder hier LEER lassen. Dann fasst der Installer die wpa_supplicant.conf nicht
+# an, nutzt ALLE dort hinterlegten Netze und übernimmt deren Reihenfolge (priority=).
+# Der Roaming-Dienst leitet das bevorzugte Heimnetz automatisch aus der höchsten
+# OS-priority ab – nichts muss hierher kopiert werden.
 WIFI_COUNTRY="DE"
+
+# Optionaler Override des Heim-Vorzugs für den Roaming-Dienst: NUR die SSID (kein
+# Zwang zum PSK). Leer => die höchste OS-priority entscheidet. Trägst du unten
+# jedoch WIFI_HOME_SSID + WIFI_HOTSPOT_SSID ein, ÜBERSCHREIBT der Installer die
+# wpa_supplicant.conf mit genau diesen zwei Profilen (mit vorherigem Backup) –
+# nur wählen, wenn PiPortal das WLAN allein verwalten soll.
 
 # Profil 1: bevorzugtes Heim-WLAN (höhere Priorität).
 WIFI_HOME_SSID=""
@@ -71,7 +82,7 @@ WIFI_BGSCAN="simple:30:-65:300"
 WIFI_ROAM_INTERVAL="15"            # Sekunden zwischen Roaming-Prüfungen
 
 # ---------------------------------------------------------------------- SMB --
-SMB_USER="dietpi"                   # existierender Systembenutzer
+SMB_USER=""                         # leer = automatisch (SSH-Login/SUDO_USER, sonst Repo-Eigentümer; nie root). Oder fester Name.
 SMB_SHARE_NAME="PiPortal"           # Freigabename => \\10.10.0.1\PiPortal
 SMB_SHARE_PATH="/srv/piportal/share"
 # SMB-Passwort: leer => der Installer fragt interaktiv nach (empfohlen).

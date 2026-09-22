@@ -2,24 +2,22 @@
 
 # PiPortal — Roadmap
 
-The core project (1.0.0) is complete and hardware-verified. The items below are **planned directions and ideas**, not commitments or dates — they describe where PiPortal is meant to grow. What has already shipped is recorded in the [`CHANGELOG.md`](../CHANGELOG.md) with its date.
+*As of: 2026-09-22 06:41 CEST*
+
+The core project is complete and verified on hardware. The points below are **planned directions and ideas** — not promises and not deadlines; they describe where PiPortal should grow. What has already shipped is listed with dates in [`CHANGELOG.md`](../CHANGELOG.md).
 
 ---
 
 ## Portable admin & AI toolbox
 
-The bigger vision behind PiPortal is a self-contained, carry-anywhere workbench:
+The larger vision behind PiPortal is a self-contained workbench you can carry anywhere:
 
-- **Curated admin toolbox** — a defined set of portable admin/dev tools staged for the isolated environment (file transfer, disk/hardware info, terminal helpers), so the stick is a ready-to-use kit rather than a bare OS. (Today the user drops their own portable tools onto the share.)
-- **Fuller Cowork integration** — a preconfigured Cowork/AI-coding environment in the isolated space so the stick doubles as a portable AI workstation. *(The Claude Code CLI itself already installs and launches via `piportal start claude` — shipped in 1.0.0; this item is the richer, preconfigured setup.)*
+- **Curated admin toolbox** *(noted 2026-09-22)* — a defined set of portable admin/dev tools for the isolated environment (file transfer, disk/hardware info, terminal helpers), so the stick is a ready-to-use kit rather than a bare OS. (Today the user puts their own portable tools on the share.)
+- **Fuller Cowork integration** *(noted 2026-09-22)* — a preconfigured Cowork / AI-coding environment in the isolated space, so the stick is also a portable AI workstation. *(The Claude Code CLI already installs and starts via `piportal start claude`; this item is the richer, preconfigured setup.)*
 
-## Storage
+## Networking / Wi-Fi
 
-- **Automatic publish cycle** for the signpost image (`forced_eject` → swap `lun.0/file`), so content updates on the read-only volume propagate to the host cleanly without a reconnect.
-
-## Quality
-
-- **shellcheck CI** (GitHub Actions) over all shell scripts, as a lightweight guard against regressions.
+- **Config-driven Wi-Fi: additive instead of replacing, any number of networks** *(noted 2026-09-22)* — today the default path (Wi-Fi fields in `config/piportal.conf` left empty) already uses **all** networks configured in DietPi, honors their order (`priority=`) and is extendable via `dietpi-config`; the home preference for the active switch-back is derived live from the highest OS `priority` (shipped in [1.1.0]). What remains is only the **optional** config-driven variant: today it writes exactly two profiles (home + hotspot) and **replaces** the existing `wpa_supplicant.conf`. Planned: make it additive (never overwrite existing DietPi networks) and support any number of profiles from the config.
 
 ---
 

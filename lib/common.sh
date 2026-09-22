@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Deterministische, sprachunabhaengige Werkzeug-Ausgaben (Parsing sicher auf jedem Sprach-OS).
+export LC_ALL=C.UTF-8
 # =============================================================================
 #  PiPortal – lib/common.sh
 #  Gemeinsame Funktionen: Logging, Idempotenz-Helfer, Backup, Config-Loader.

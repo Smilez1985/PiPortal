@@ -14,6 +14,8 @@
 #  aufgerufen.
 # =============================================================================
 set -uo pipefail
+# Deterministische, sprachunabhaengige Werkzeug-Ausgaben (Parsing sicher auf jedem Sprach-OS).
+export LC_ALL=C.UTF-8
 
 CONF="/etc/piportal/piportal.conf"
 NET_MODE="rndis"

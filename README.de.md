@@ -38,7 +38,7 @@ Gedacht ist das Ganze als **mobiles Schweizer Taschenmesser für Technikbegeiste
 ## Voraussetzungen (Hardware)
 
 - **Raspberry Pi Zero 2 W**
-- **GeeekPi USB-Dongle-Aufsatz** (macht den Pi direkt in eine USB-A-Buchse steckbar und versorgt ihn darüber mit Strom)
+- **GeeekPi USB-Dongle-Aufsatz** (macht den Pi direkt in eine USB-A-Buchse steckbar und versorgt ihn darüber mit Strom) — **optional**: es geht auch mit einem einfachen **USB-OTG-Kabel** am Daten-Port
 - **microSD-Karte** (16 GB genügen, ab 64 GB gibt es automatisch mehr Auslagerungsspeicher)
 - ein **WLAN**, in das sich der Pi einwählen kann (Router oder Handy-Hotspot)
 
@@ -53,6 +53,8 @@ Der USB-A-Stecker sitzt am **Daten-Port** des Pi (nicht am reinen Strom-Port), s
 ---
 
 ## Installation
+
+> **Ausführliche Schritt-für-Schritt-Anleitung** (Voraussetzungen, DietPi-Vorbereitung, WLAN-Modell, Abhängigkeiten, Verifikation): [`docs/INSTALL.de.md`](docs/INSTALL.de.md). Hier die Kurzfassung.
 
 ### 1. Betriebssystem vorbereiten
 
@@ -76,13 +78,15 @@ Die IP steht im Router oder lässt sich über `dietpi.local` erreichen.
 # Repo auf den Pi holen (per git oder als Archiv kopieren)
 cd ~/PiPortal
 
-# Eigene Einstellungen anlegen (WLAN-Namen, Passwörter …)
+# Eigene Einstellungen anlegen (SMB-Benutzer/-Passwort …)
 cp config/piportal.conf.example config/piportal.conf
 nano config/piportal.conf
 
 # Installationsprogramm starten
 sudo ./install.sh
 ```
+
+> **WLAN gehört normalerweise NICHT in diese Datei.** Deine Netze verwaltet DietPi (Schritt 1 / später `dietpi-config`); PiPortal übernimmt **alle** dort hinterlegten Netze automatisch. Die WLAN-Felder in `config/piportal.conf` lässt du im Normalfall **leer** — nur wenn PiPortal das WLAN allein verwalten soll, trägst du dort SSIDs ein (ersetzt dann die vorhandene Konfiguration). Details: [`docs/INSTALL.de.md`](docs/INSTALL.de.md).
 
 Das Menü führt durch alle Schritte. Danach einmal neu starten:
 
@@ -177,7 +181,7 @@ PiPortal/
 ├── install.sh / uninstall.sh   · Ein-Klick-Installer & Rollback
 ├── config/                     · zentrale Konfiguration (Vorlage mit Platzhaltern)
 ├── lib/ · modules/ · assets/   · Installer-Bausteine, Skripte, CLI, Portal-Inhalt
-├── docs/                       · Architektur, Design, Security & Roadmap (DE/EN)
+├── docs/                       · Installation, Architektur, Design, Security & Roadmap (DE/EN)
 └── images/                     · Fotos des Geräts
 ```
 

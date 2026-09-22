@@ -10,11 +10,20 @@
 #  (ssh dietpi@10.10.0.1), selbst wenn gerade kein WLAN verbunden ist.
 # =============================================================================
 set -uo pipefail
+# Deterministische, sprachunabhaengige Werkzeug-Ausgaben (Parsing sicher auf jedem Sprach-OS).
+export LC_ALL=C.UTF-8
 
 CONF="/etc/piportal/piportal.conf"
 USB_LAN_IP="10.10.0.1"
 # shellcheck disable=SC1090
 [ -f "$CONF" ] && . "$CONF" 2>/dev/null
+
+# SMB-/Login-Benutzer: echte Variable aus der Config. Fehlt sie, aus dem OS
+# ableiten (der aufrufende Nicht-Root-Login, nie root) – nichts hart verdrahtet.
+if [ -z "${SMB_USER:-}" ]; then
+    SMB_USER="${SUDO_USER:-$(logname 2>/dev/null || echo "${USER:-}")}"
+fi
+[ "${SMB_USER:-}" = "root" ] && SMB_USER="$(logname 2>/dev/null || echo "${USER:-}")"
 
 WIFI_IFACE="wlan0"
 
@@ -178,11 +187,25 @@ cmd_poweroff() {
 }
 
 # ==============================================================================
-#  --smb-passwd   (Netzlaufwerk-Passwort SETZEN/aendern – keine Daten geloescht)
-#  Fuer die Erst-Einrichtung und spaetere Passwortwechsel.
+#  --smb-passwd   (EIN Werkzeug, zwei Fälle – automatisch nach Zustand)
+#     Passwort NOCH NICHT gesetzt -> Erst-Einrichtung (_smb_set, keine Daten weg)
+#     Passwort BEREITS gesetzt    -> Zurücksetzen  (_smb_reset, löscht Share)
+#  "idempotent, nur umgekehrt": if not exist -> setzen, if exist -> zurücksetzen.
 # ==============================================================================
 cmd_smb_passwd() {
-    local user="${SMB_USER:-dietpi}"
+    local user="${SMB_USER}"
+    if _sudo pdbedit -L 2>/dev/null | grep -q "^${user}:"; then
+        echo "${DIM}(Passwort für '${user}' ist gesetzt → Zurücksetzen-Modus.)${R}"
+        _smb_reset
+    else
+        echo "${DIM}(Noch kein SMB-Passwort für '${user}' → Erst-Einrichtung.)${R}"
+        _smb_set
+    fi
+}
+
+# --- Erst-Einrichtung: Passwort SETZEN/ändern (keine Daten gelöscht) ----------
+_smb_set() {
+    local user="${SMB_USER}"
     local share_name="${SMB_SHARE_NAME:-PiPortal}"
     local share_path="${SMB_SHARE_PATH:-/srv/piportal/share}"
     local smbconf="/etc/samba/smb.conf"
@@ -220,11 +243,11 @@ cmd_smb_passwd() {
     fi
 }
 
-# ==============================================================================
-#  --smb-reset   (Netzlaufwerk-Zugang zuruecksetzen; Berechtigung = SSH-Login)
-# ==============================================================================
-cmd_smb_reset() {
-    local user="${SMB_USER:-dietpi}"
+# --- Zurücksetzen: Netzlaufwerk-Zugang neu vergeben (löscht Share-Inhalt) ------
+#     Berechtigung = SSH-Login. Wird über cmd_smb_passwd erreicht, wenn bereits
+#     ein Passwort gesetzt ist (Fall "Passwort vergessen").
+_smb_reset() {
+    local user="${SMB_USER}"
     local share_name="${SMB_SHARE_NAME:-PiPortal}"
     local share_path="${SMB_SHARE_PATH:-/srv/piportal/share}"
     local smbconf="/etc/samba/smb.conf"
@@ -272,14 +295,14 @@ cmd_smb_reset() {
     _sudo chown "${newuser}:${newuser}" "$share_path"
     _sudo chmod 2775 "$share_path"
 
-    # 4) connect-Helfer (Repo-Standard) wiederherstellen, falls Quelle auffindbar.
-    local helper
-    for helper in /home/*/PiPortal/assets/windows/connect-piportal.cmd /opt/PiPortal/assets/windows/connect-piportal.cmd; do
-        [ -f "$helper" ] || continue
-        _sudo cp "$helper" "${share_path}/connect-piportal.cmd"
+    # 4) connect-Helfer wiederherstellen: aus der bereits GERENDERTEN Signpost-
+    #    Kopie (echte Werte, keine ${PP_*}-Platzhalter). Fehlt sie, wird nichts
+    #    kopiert – der Wegweiser bringt den Helfer ohnehin mit.
+    local signpost_cmd; signpost_cmd="$(dirname "${PORTAL_IMAGE:-/srv/piportal/portal.img}")/signpost/connect-piportal.cmd"
+    if [ -f "$signpost_cmd" ]; then
+        _sudo cp "$signpost_cmd" "${share_path}/connect-piportal.cmd"
         _sudo chown "${newuser}:${newuser}" "${share_path}/connect-piportal.cmd"
-        break
-    done
+    fi
 
     # 5) Altes SMB-Konto bei Benutzerwechsel entfernen, neues Passwort setzen.
     [ "$newuser" != "$user" ] && _sudo smbpasswd -x "$user" 2>/dev/null || true
@@ -296,6 +319,23 @@ cmd_smb_reset() {
     else
         echo "${RD}smb.conf fehlerhaft nach Aenderung - bitte pruefen.${R}"; return 1
     fi
+}
+
+# ==============================================================================
+#  --publish   (Wegweiser-Image neu bauen + zur Laufzeit sauber neu einlegen)
+#  Nach Änderungen an den Wegweiser-Dateien (unter /srv/piportal/signpost):
+#  baut das read-only FAT-Image neu und legt es am Host per forced_eject neu ein,
+#  sodass der geänderte Inhalt OHNE Aus-/Einstecken erscheint.
+# ==============================================================================
+cmd_publish() {
+    local helper="/usr/local/sbin/piportal-publish.sh"
+    if [ ! -x "$helper" ]; then
+        echo "${RD}Publish-Helfer nicht gefunden: ${helper}${R}"
+        echo "  Bitte den Installer erneut laufen lassen."; return 1
+    fi
+    echo "${CY}${B}PiPortal – Wegweiser neu veröffentlichen…${R}"
+    echo "  Quelle: ${DIM}$(dirname "${PORTAL_IMAGE:-/srv/piportal/portal.img}")/signpost${R}"
+    _sudo "$helper"
 }
 
 # ==============================================================================
@@ -335,12 +375,14 @@ ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
   ${CY}piportal --wifi-switch <id>${R}  Gezielt zu WLAN-ID wechseln
   ${CY}piportal --update${R}         dietpi-update + apt upgrade + Reboot (mit -y ohne Rückfrage)
   ${CY}piportal --poweroff${R}       Sauber herunterfahren (danach gefahrlos abziehen)
-  ${CY}piportal --smb-passwd${R}     Netzlaufwerk-Passwort setzen/ändern (Erst-Einrichtung, keine Daten weg)
-  ${CY}piportal --smb-reset${R}      Netzlaufwerk-Zugang zurücksetzen (löscht Share-Inhalt!)
+  ${CY}piportal --smb-passwd${R}     Netzlaufwerk-Passwort einrichten – erkennt selbst:
+                          ${DIM}noch keins gesetzt → setzen (keine Daten weg);
+                          schon gesetzt → zurücksetzen (löscht Share-Inhalt!)${R}
+  ${CY}piportal --publish${R}        Wegweiser-Laufwerk neu bauen + am Host neu einlegen (ohne Abziehen)
   ${CY}piportal start claude${R}     Claude Code CLI starten (installiert sie automatisch, falls nötig)
   ${CY}piportal --help${R}           Diese Hilfe
 
-Tipp: Vom Host-PC per USB erreichbar mit  ${DIM}ssh dietpi@${USB_LAN_IP}${R}  –
+Tipp: Vom Host-PC per USB erreichbar mit  ${DIM}ssh ${SMB_USER}@${USB_LAN_IP}${R}  –
 auch wenn der Pi gerade kein WLAN hat.
 EOF
 }
@@ -350,8 +392,9 @@ case "${1:-}" in
     --wifi-switch|wifi-switch|-w) shift 2>/dev/null; cmd_wifi_switch "${1:-}" ;;
     --update|update|-u)        shift 2>/dev/null; cmd_update "${1:-}" ;;
     --poweroff|poweroff|off)   cmd_poweroff ;;
-    --smb-passwd|smb-passwd)   cmd_smb_passwd ;;
-    --smb-reset|smb-reset)     cmd_smb_reset ;;
+    # Ein Werkzeug für beide Fälle; --smb-reset bleibt als Alias erhalten.
+    --smb-passwd|smb-passwd|--smb-reset|smb-reset|--smb|smb) cmd_smb_passwd ;;
+    --publish|publish)         cmd_publish ;;
     start|--start)             shift 2>/dev/null
                                case "${1:-}" in
                                    claude) cmd_start_claude ;;

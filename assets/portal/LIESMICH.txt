@@ -13,7 +13,7 @@ auf einem geschützten Netzlaufwerk direkt auf dem PiPortal-Stick.
 
 2) Öffne den Windows-Explorer und gib oben in die Adresszeile ein:
 
-        \\10.10.0.1\PiPortal
+        \\${PP_IP}\${PP_SHARE}
 
    Alternativ per Verknüpfung: Doppelklick auf  "PiPortal-Netzlaufwerk.url"
    auf diesem Datenträger.
@@ -21,10 +21,10 @@ auf einem geschützten Netzlaufwerk direkt auf dem PiPortal-Stick.
    Doppelklick auf  "Netzlaufwerk-verbinden.cmd".
 
 3) Melde dich mit deinem SMB-Benutzer und -Passwort an.
-   Tipp: den Benutzernamen als  10.10.0.1\dietpi  (bzw. PiPortal\dietpi)
+   Tipp: den Benutzernamen als  ${PP_IP}\${PP_USER}  (bzw. PiPortal\${PP_USER})
    eingeben – sonst versucht Windows dein lokales PC-Konto.
    BEIM ERSTEN MAL: Passwort noch nicht gesetzt? Doppelklick auf
-   "SMB-Passwort_setzen.vbs" auf diesem Datenträger – dort legst du
+   "SMB-Passwort.vbs" auf diesem Datenträger – dort legst du
    Benutzer + Passwort fest (ohne Datenverlust).
 
 -------------------------------------------------------------------------------
@@ -33,7 +33,7 @@ auf einem geschützten Netzlaufwerk direkt auf dem PiPortal-Stick.
 
 Windows bringt SSH bereits mit - kein PuTTY nötig. Öffne PowerShell oder CMD:
 
-        ssh dietpi@10.10.0.1
+        ssh ${PP_USER}@${PP_IP}
 
 Oder Doppelklick auf  "connect-piportal.cmd"  auf diesem Datenträger.
 
@@ -44,15 +44,15 @@ Oder Doppelklick auf  "connect-piportal.cmd"  auf diesem Datenträger.
 - Der PiPortal hat sein eigenes Internet (WLAN). Deine PC-Internetverbindung
   bleibt unberührt.
 - Dieser Wegweiser-Datenträger ist schreibgeschützt (read-only). Ablegen von
-  Dateien bitte über das Netzlaufwerk \\10.10.0.1\PiPortal.
+  Dateien bitte über das Netzlaufwerk \\${PP_IP}\${PP_SHARE}.
 
 -------------------------------------------------------------------------------
   Passwort fürs Netzlaufwerk vergessen?
 -------------------------------------------------------------------------------
 
-Doppelklick auf  "SMB-Passwort_vergessen.vbs"  auf diesem Datenträger.
-Es öffnet eine SSH-Sitzung zum PiPortal, in der du den Zugang neu setzt.
-ACHTUNG: dabei werden ALLE Dateien auf dem Netzlaufwerk gelöscht. Wer sich
-per SSH anmelden kann (Benutzer dietpi), darf zurücksetzen.
+Doppelklick auf  "SMB-Passwort.vbs"  auf diesem Datenträger – dasselbe
+Werkzeug wie fürs Einrichten. Ist bereits ein Passwort gesetzt, bietet es
+das Zurücksetzen an. ACHTUNG: dabei werden ALLE Dateien auf dem Netzlaufwerk
+gelöscht. Wer sich per SSH anmelden kann (Benutzer ${PP_USER}), darf zurücksetzen.
 
 ===============================================================================

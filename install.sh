@@ -12,6 +12,8 @@
 #     sudo ./install.sh -h | --help
 # =============================================================================
 set -euo pipefail
+# Deterministische, sprachunabhaengige Werkzeug-Ausgaben (Parsing sicher auf jedem Sprach-OS).
+export LC_ALL=C.UTF-8
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
@@ -43,7 +45,7 @@ Phasen:
   20_wifi_roaming     WLAN-Profile + Roaming-Service
   30_gadget           configfs-Composite-Gadget (RNDIS + Mass Storage)
   40_portal_smb       Samba gehärtet + Wegweiser-Image
-  45_cli              piportal-CLI (--status/--wifi-switch/--update/--smb-reset) + Aliase
+  45_cli              piportal-CLI (--status/--wifi-switch/--update/--smb-passwd/--publish) + Aliase
   47_updater          Update-Routine (tools/update) + Login-Abfrage
   50_extras           SSH-Helper, optional Claude Code CLI
 EOF

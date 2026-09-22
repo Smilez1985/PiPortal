@@ -8,8 +8,27 @@
 module_40_portal_smb() {
     log_step "Phase 4 – SMB-Portal + Wegweiser-Image"
 
-    # avahi-daemon: macht \\PiPortal.local auflösbar (NetBIOS ist bewusst aus).
-    ensure_pkg samba samba-common-bin dosfstools mtools avahi-daemon
+    # --- SMB-/Login-Benutzer bestimmen (nie hart verdrahtet) ---
+    # Echte, deklarierte Variable SMB_USER. Wenn die Config sie leer lässt, aus
+    # mehreren Quellen redundant ableiten (Reihenfolge = Vorrang), nie root:
+    #   1) SUDO_USER   – der Nicht-Root-Login, der 'sudo ./install.sh' aufrief
+    #   2) logname     – der angemeldete Benutzer (OS)
+    #   3) Eigentümer des Repo-Verzeichnisses (aus dem Dateipfad, PIPORTAL_ROOT)
+    # So passt es auf DietPi ('dietpi') wie auf jedem anderen Linux/Benutzernamen.
+    if [ -z "${SMB_USER:-}" ]; then
+        SMB_USER="${SUDO_USER:-}"
+        [ -z "${SMB_USER}" ] && SMB_USER="$(logname 2>/dev/null || true)"
+        [ -z "${SMB_USER}" ] && SMB_USER="$(stat -c '%U' "${PIPORTAL_ROOT}" 2>/dev/null || true)"
+        [ "${SMB_USER}" = "root" ] && SMB_USER=""
+    fi
+    if [ -z "${SMB_USER}" ] || [ "${SMB_USER}" = "root" ]; then
+        die "SMB_USER ist leer bzw. root – bitte in der Config einen Nicht-Root-Benutzer setzen (SMB_USER=...)."
+    fi
+    log_info "SMB-/Login-Benutzer: ${SMB_USER}"
+
+    # avahi-daemon: \\PiPortal.local auflösbar. gettext-base liefert envsubst,
+    # mit dem die Wegweiser-Vorlagen aus echten ${PP_*}-Variablen gerendert werden.
+    ensure_pkg samba samba-common-bin dosfstools mtools avahi-daemon gettext-base
 
     # --- 0. Unix-Benutzer sicherstellen (smbpasswd -a braucht ihn) ---
     if id -u "${SMB_USER}" >/dev/null 2>&1; then
@@ -23,12 +42,16 @@ module_40_portal_smb() {
     # --- 1. Share-Verzeichnis ---
     ensure_dir "${SMB_SHARE_PATH}" 2775 "${SMB_USER}:${SMB_USER}"
 
-    # Kurz-Anleitung auch auf den Share (H:) legen – das ist, was der Nutzer
-    # sieht, wenn er das Netzlaufwerk oeffnet. Wird bei jedem Lauf aktualisiert.
-    if [ -f "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" ]; then
-        install -m 0644 -o "${SMB_USER}" -g "${SMB_USER}" \
-            "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" "${SMB_SHARE_PATH}/LIESMICH.txt" 2>/dev/null || true
-    fi
+    # Kurz-Anleitung auch in den Share legen – das ist, was der Nutzer sieht,
+    # wenn er das Netzlaufwerk oeffnet. Beide Sprachen + zweisprachige .md,
+    # bei jedem Lauf aktualisiert und aus den echten ${PP_*}-Variablen gerendert.
+    local doc
+    for doc in LIESMICH.txt readme.txt README.md; do
+        if [ -f "${PIPORTAL_ASSETS_DIR}/portal/${doc}" ]; then
+            render_asset "${PIPORTAL_ASSETS_DIR}/portal/${doc}" "${SMB_SHARE_PATH}/${doc}" \
+                && chown "${SMB_USER}:${SMB_USER}" "${SMB_SHARE_PATH}/${doc}" 2>/dev/null || true
+        fi
+    done
 
     # --- 2. Gehärtete Samba-Konfiguration (PiPortal-Block, restliche smb.conf bleibt) ---
     write_file_if_changed /etc/samba/smb.conf 0644 <<EOF
@@ -93,7 +116,7 @@ EOF
                 && log_ok "SMB-Benutzer '${SMB_USER}' angelegt."
         else
             log_warn "Kein SMB-Passwort gesetzt. Vor der ersten Nutzung setzen mit:"
-            log_info "   piportal --smb-passwd   (oder auf dem Laufwerk: SMB-Passwort_setzen.vbs)"
+            log_info "   piportal --smb-passwd   (oder auf dem Laufwerk: SMB-Passwort.vbs)"
         fi
     fi
 
@@ -108,49 +131,61 @@ EOF
     build_portal_image
 }
 
-# Baut ein kleines read-only FAT-Image mit Wegweiser-Inhalt (idempotent).
+# Befüllt das persistente Signpost-Verzeichnis und baut daraus das read-only
+# FAT-Wegweiser-Image. Das eigentliche Bauen + saubere Neu-Einlegen erledigt
+# der Publish-Helfer (piportal-publish.sh), den auch 'piportal --publish' ruft –
+# so gibt es genau EINEN Weg, das Image zu erzeugen (keine doppelte Logik).
 # FAT statt ISO9660, weil der RPi-Kernel 6.18 die cdrom=1-Emulation beim
 # file-Binding ablehnt; ein FAT-Image + ro=1 ist der windows-kompatible Weg.
 build_portal_image() {
-    local staging; staging="$(mktemp -d)"
-    cp "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" "$staging/"
-    cp "${PIPORTAL_ASSETS_DIR}/portal/PiPortal-Netzlaufwerk.url" "$staging/"
-    [ "${ENABLE_SSH_HELPER}" = "1" ] && cp "${PIPORTAL_ASSETS_DIR}/windows/connect-piportal.cmd" "$staging/"
-    # Netzlaufwerk mit (temporaerem) Laufwerkbuchstaben verbinden.
-    cp "${PIPORTAL_ASSETS_DIR}/windows/Netzlaufwerk-verbinden.cmd" "$staging/" 2>/dev/null || true
-    # Erst-Einrichtung: Passwort setzen (keine Daten weg) + Reset (mit Loeschen).
-    cp "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort_setzen.vbs"    "$staging/" 2>/dev/null || true
-    cp "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort_vergessen.vbs" "$staging/" 2>/dev/null || true
-    # Claude-Code-Starter nur, wenn das KI-Labor aktiviert ist.
-    [ "${ENABLE_CLAUDE_CODE}" = "1" ] && cp "${PIPORTAL_ASSETS_DIR}/windows/Claude-Code.vbs" "$staging/" 2>/dev/null || true
+    # Persistentes Signpost-Staging: hier liegen die Wegweiser-Dateien dauerhaft,
+    # daraus baut --publish jederzeit neu. Neben dem Image, per Konvention.
+    local sp; sp="$(dirname "${PORTAL_IMAGE}")/signpost"
+    ensure_dir "$sp" 0755
+
+    # Wegweiser-Inhalt (bei jedem Lauf aus dem Repo aktualisieren) – alle Dateien
+    # werden aus den echten ${PP_*}-Variablen gerendert (kein hart verdrahteter Name).
+    render_asset "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt"              "$sp/LIESMICH.txt"
+    render_asset "${PIPORTAL_ASSETS_DIR}/portal/readme.txt"                "$sp/readme.txt"
+    render_asset "${PIPORTAL_ASSETS_DIR}/portal/README.md"                 "$sp/README.md"
+    render_asset "${PIPORTAL_ASSETS_DIR}/portal/PiPortal-Netzlaufwerk.url" "$sp/PiPortal-Netzlaufwerk.url"
+    # Optionale/veraltete Helfer erst entfernen (Upgrade-sauber), dann neu setzen.
+    # Die frueheren zwei VBS (setzen/vergessen) sind durch die eine SMB-Passwort.vbs ersetzt.
+    rm -f "$sp/connect-piportal.cmd" "$sp/Claude-Code.vbs" \
+          "$sp/SMB-Passwort_setzen.vbs" "$sp/SMB-Passwort_vergessen.vbs"
+    [ "${ENABLE_SSH_HELPER}" = "1" ] && \
+        render_asset "${PIPORTAL_ASSETS_DIR}/windows/connect-piportal.cmd" "$sp/connect-piportal.cmd"
+    render_asset "${PIPORTAL_ASSETS_DIR}/windows/Netzlaufwerk-verbinden.cmd" "$sp/Netzlaufwerk-verbinden.cmd"
+    # Ein Werkzeug fuer beide Faelle (Setzen bei Erst-Einrichtung, Zuruecksetzen wenn gesetzt).
+    render_asset "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort.vbs"           "$sp/SMB-Passwort.vbs"
+    [ "${ENABLE_CLAUDE_CODE}" = "1" ] && \
+        render_asset "${PIPORTAL_ASSETS_DIR}/windows/Claude-Code.vbs" "$sp/Claude-Code.vbs"
 
     ensure_dir "$(dirname "${PORTAL_IMAGE}")"
-    local newimg; newimg="$(mktemp --suffix=.img)"
-    # 16-MB-FAT16-Image: FAT16 braucht genug Cluster (4 MB scheitern als "too small"),
-    # 16 MB ist die kleinste breit windows-kompatible Größe. Reichlich für den Wegweiser.
-    truncate -s 16M "$newimg"
-    if ! mkfs.vfat -F 16 -n "${PORTAL_LABEL}" "$newimg" >/dev/null 2>&1; then
-        log_warn "Konnte FAT-Image nicht erstellen – Portal-Wegweiser übersprungen."
-        rm -f "$newimg"; rm -rf "$staging"; return 0
-    fi
-    # Dateien ohne Mount hineinkopieren (mtools).
-    ( cd "$staging" && MTOOLS_SKIP_CHECK=1 mcopy -i "$newimg" ./* :: ) 2>/dev/null \
-        || log_warn "mcopy: nicht alle Wegweiser-Dateien konnten kopiert werden."
 
-    if [ -f "${PORTAL_IMAGE}" ] && cmp -s "$newimg" "${PORTAL_IMAGE}"; then
-        log_skip "Portal-Image unverändert: ${PORTAL_IMAGE}"
-        rm -f "$newimg"
-    else
-        install -m 0644 "$newimg" "${PORTAL_IMAGE}"
-        rm -f "$newimg"
+    # Publish-Helfer installieren (wird auch von 'piportal --publish' genutzt).
+    install_file "${PIPORTAL_ASSETS_DIR}/gadget/piportal-publish.sh" "${PIPORTAL_SBIN}/piportal-publish.sh" 0755
+
+    # Image aus dem Signpost-Staging bauen + (falls Gadget läuft) sauber neu einlegen.
+    if "${PIPORTAL_SBIN}/piportal-publish.sh"; then
         log_ok "Portal-Image erzeugt (read-only FAT): ${PORTAL_IMAGE}"
-        # Falls Gadget schon läuft: Medium zur Laufzeit tauschen (removable).
-        local lun="/sys/kernel/config/usb_gadget/piportal/functions/mass_storage.0/lun.0"
-        if [ -w "${lun}/file" ]; then
-            echo "" > "${lun}/file" 2>/dev/null || true
-            echo "${PORTAL_IMAGE}" > "${lun}/file" 2>/dev/null \
-                && log_ok "Wegweiser-Medium im laufenden Gadget aktualisiert."
-        fi
+    else
+        log_warn "Portal-Image-Build meldete einen Fehler (siehe Ausgabe oben)."
     fi
-    rm -rf "$staging"
+}
+
+# Rendert eine Wegweiser-Vorlage in die Zieldatei: ersetzt AUSSCHLIESSLICH die
+# echten Variablen ${PP_USER} / ${PP_IP} / ${PP_SHARE} (envsubst mit fester
+# Shell-Format-Liste – alle anderen $-Sequenzen bleiben unangetastet). So sind
+# Benutzer/IP/Freigabe deklariert, importiert und nirgends hart verdrahtet.
+render_asset() {
+    local src="$1" dst="$2"
+    [ -f "$src" ] || { log_warn "Vorlage fehlt: $src"; return 1; }
+    # envsubst rendert die echten Variablen; sed erzwingt CRLF, weil ALLE
+    # Wegweiser-/Share-Dateien auf Windows gelesen werden (altes Notepad/cscript
+    # erwarten CRLF). 'sed s/\r*$/\r/' normalisiert vorhandene CRs und setzt CRLF.
+    PP_USER="${SMB_USER}" PP_IP="${USB_LAN_IP}" PP_SHARE="${SMB_SHARE_NAME}" \
+        envsubst '${PP_USER} ${PP_IP} ${PP_SHARE}' < "$src" \
+        | sed 's/\r*$/\r/' > "$dst"
+    chmod 0644 "$dst"
 }

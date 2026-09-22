@@ -38,7 +38,7 @@ The whole thing is meant to be a **mobile Swiss Army knife for tech enthusiasts 
 ## Requirements (hardware)
 
 - **Raspberry Pi Zero 2 W**
-- **GeeekPi USB dongle adapter** (makes the Pi plug straight into a USB-A port and powers it through it)
+- **GeeekPi USB dongle adapter** (makes the Pi plug straight into a USB-A port and powers it through it) — **optional**: a plain **USB-OTG cable** on the data port works too
 - **microSD card** (16 GB is enough; from 64 GB up you automatically get more swap space)
 - a **Wi-Fi network** the Pi can connect to (router or phone hotspot)
 
@@ -53,6 +53,8 @@ The USB-A plug sits on the Pi's **data port** (not the power-only port), so data
 ---
 
 ## Installation
+
+> **Full step-by-step guide** (requirements, DietPi preparation, Wi-Fi model, dependencies, verification): [`docs/INSTALL.md`](docs/INSTALL.md). Below is the short version.
 
 ### 1. Prepare the operating system
 
@@ -77,13 +79,15 @@ The IP is shown in your router or can be reached via `dietpi.local`.
 git clone https://github.com/Smilez1985/PiPortal.git
 cd PiPortal
 
-# Create your own settings (Wi-Fi names, passwords …)
+# Create your own settings (SMB user/password …)
 cp config/piportal.conf.example config/piportal.conf
 nano config/piportal.conf
 
 # Start the installer
 sudo ./install.sh
 ```
+
+> **Wi-Fi normally does NOT belong in this file.** Your networks are managed by DietPi (step 1 / later `dietpi-config`); PiPortal automatically uses **all** networks configured there. Leave the Wi-Fi fields in `config/piportal.conf` **empty** by default — only fill in SSIDs if PiPortal should manage Wi-Fi on its own (which then replaces the existing configuration). Details: [`docs/INSTALL.md`](docs/INSTALL.md).
 
 The menu guides you through all the steps. Then reboot once:
 
@@ -178,7 +182,7 @@ PiPortal/
 ├── install.sh / uninstall.sh   · One-click installer & rollback
 ├── config/                     · central configuration (template with placeholders)
 ├── lib/ · modules/ · assets/   · installer building blocks, scripts, CLI, portal content
-├── docs/                       · architecture, design, security & roadmap docs (EN/DE)
+├── docs/                       · installation, architecture, design, security & roadmap docs (EN/DE)
 └── images/                     · photos of the device
 ```
 

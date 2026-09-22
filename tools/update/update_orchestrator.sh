@@ -16,6 +16,8 @@
 #    manual  nie automatisch – nur Warnung hinterlegen
 # =============================================================================
 set -uo pipefail
+# Deterministische, sprachunabhaengige Werkzeug-Ausgaben (Parsing sicher auf jedem Sprach-OS).
+export LC_ALL=C.UTF-8
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MODULE_DIR="${MODULE_DIR:-${SCRIPT_DIR}/modules}"

@@ -9,4 +9,4 @@ Option Explicit
 Dim sh
 Set sh = CreateObject("WScript.Shell")
 ' -t erzwingt ein TTY, damit Claude Code interaktiv laeuft.
-sh.Run "cmd /c ssh -t dietpi@10.10.0.1 piportal start claude", 1, False
+sh.Run "cmd /c ssh -t ${PP_USER}@${PP_IP} piportal start claude", 1, False

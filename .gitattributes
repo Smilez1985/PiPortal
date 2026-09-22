@@ -9,9 +9,13 @@ uninstall.sh text eol=lf
 assets/cli/piportal        text eol=lf
 assets/gadget/*.sh         text eol=lf
 
-# Windows-Helfer braucht CRLF (wird auf dem Windows-Host doppelgeklickt).
+# Windows-Helfer/-Texte brauchen CRLF (werden auf dem Windows-Host gelesen/
+# doppelgeklickt: altes Notepad und cscript erwarten CRLF).
 *.cmd   text eol=crlf
 *.url   text eol=crlf
+*.vbs   text eol=crlf
+assets/portal/LIESMICH.txt  text eol=crlf
+assets/portal/readme.txt    text eol=crlf
 
 # Binärdateien nie anfassen.
 *.jpg   binary
