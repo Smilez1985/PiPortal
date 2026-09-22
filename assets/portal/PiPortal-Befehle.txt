@@ -1,0 +1,34 @@
+===============================================================================
+  PiPortal  -  Befehle / Commands  (Spickzettel / cheat sheet)
+===============================================================================
+
+Verbinden / connect (vom PC ueber USB / from the PC over USB):
+
+        ssh ${PP_USER}@${PP_IP}
+
+Dann auf dem PiPortal / then on the PiPortal:  piportal <befehl>
+(ausfuehrliche Doku / full docs:  docs/CLI.de.md , docs/CLI.md)
+
+-------------------------------------------------------------------------------
+  piportal --status              Ueberblick: IPs, CPU-Temp, RAM, Dienste
+                                 overview: IPs, CPU temp, RAM, services
+  piportal --wifi-switch         WLAN-Profil wechseln (Menue) / switch Wi-Fi
+  piportal --wifi-switch next    zum naechsten WLAN / next Wi-Fi
+  piportal --update              System aktualisieren + Reboot / update + reboot
+  piportal --poweroff            sauber ausschalten / clean shutdown
+  piportal --smb-passwd          Netzlaufwerk-Passwort setzen bzw. zuruecksetzen
+                                 set or reset the network-drive password
+  piportal --publish             Wegweiser neu einlegen / re-publish this drive
+  piportal --tailscale-up  (tsup)   Tailscale verbinden / connect (bis Reboot)
+  piportal --tailscale-down (tsdown) Tailscale trennen / disconnect
+  piportal start claude          Claude Code CLI starten / start it
+  piportal --help                Hilfe / help
+
+Aliase / aliases (ab naechster Anmeldung / from next login):
+  pp = piportal   ppstatus = piportal --status   cls/clean = Bildschirm leeren
+
+-------------------------------------------------------------------------------
+  Vom Handy (mit Tailscale) ueberall / from your phone (with Tailscale) anywhere:
+        ssh ${PP_USER}@<Tailnet-IP 100.64.x.x>
+  (Tailnet-IP zeigt / shows:  piportal --tailscale-up  bzw.  tailscale ip -4)
+===============================================================================

@@ -4,6 +4,35 @@
 
 Alle nennenswerten Änderungen an PiPortal. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [1.2.0] — 2026-09-22 15:35 CEST
+
+### Hinzugefügt
+- **CLI-Kurzbefehl `piportal --tailscale-up` / `--tailscale-down`** (Aliase `tsup`/`tsdown`):
+  löst den langen `tailscale up --login-server <URL>` als Einzeiler aus, zeigt gleich die
+  Tailnet-IP + den Handy-SSH-Befehl. Die URL kommt aus `TAILSCALE_LOGIN_SERVER` in der
+  **lokalen, gitignorierten** Config (im Repo nur leere Vorlage – keine fremden Logins). Die CLI
+  liest die root-only Config dafür gezielt per `sudo` (Config bleibt `0640`).
+- **`docs/CLI.de.md` / `docs/CLI.md`** – Spickzettel aller `piportal`-Befehle. Eine Kurzfassung
+  (`PiPortal-Befehle.txt`) liegt zusätzlich auf dem Wegweiser-Laufwerk und im Share, zum schnellen
+  Nachlesen, wenn man den PiPortal nach Monaten wieder benutzt.
+- **Modul 55 – Tailscale-Client (Opt-in, `ENABLE_TAILSCALE=1`, Standard aus)**: installiert auf
+  Wunsch **nur** den Tailscale-Client als Vorbereitung, **paketmanager-agnostisch** — DietPi über
+  den Katalog (`dietpi-software 58`), Arch/Alpine nativ (`pacman`/`apk`), Debian/Ubuntu/Fedora/
+  RHEL/openSUSE über das offizielle Tailscale-Install-Script (korrekter Vendor-Repo-Weg je
+  `apt`/`dnf`/`yum`/`zypper`), sonst Script-Fallback. **Kein Onboarding**, **keine** Keys/URLs/Daten
+  im Repo — das Anmelden (`tailscale up …`) macht der Nutzer selbst.
+- **Bewusst manuell und nicht persistent**: `tailscaled` läuft (damit `tailscale up` greift), ein
+  Boot-Hook (`piportal-tailscale-down.service`) lässt Tailscale nach **jedem Reboot getrennt**.
+  So läuft es nur nach manuellem `tailscale up …` und ist nach dem Reboot wieder aus — verhindert
+  u. a. den Subnetz-Self-Hijack, wenn der PiPortal im Heimnetz hängt.
+- **`docs/TAILSCALE.de.md` / `docs/TAILSCALE.md`**: Onboarding-Anleitung mit dem klaren Hinweis,
+  dass das Feature einen Tailscale-Konto **oder** einen selbst gehosteten Headscale-Server
+  voraussetzt (ohne Server bleibt das Opt-in auf 0). Enthält Cloud-/Headscale-Weg, manuellen
+  Reconnect, den Zugriff vom Handy über die **Tailnet-IP** (`100.64.x.x`, netzunabhängig), die
+  `--accept-routes`-Warnung fürs on-LAN-Gerät (Split-Tunnel ≠ Exit-Node) und den DNS-Rebind-Stolperstein.
+
+---
+
 ## [1.1.0] — 2026-09-22 06:41 CEST
 
 Folgearbeiten nach der ersten Hardware-Fassung, alle live am Gerät verifiziert.

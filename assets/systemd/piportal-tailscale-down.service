@@ -1,0 +1,18 @@
+[Unit]
+# PiPortal: haelt Tailscale nach jedem Boot GETRENNT.
+# Der Client ist opt-in und bewusst NICHT persistent: er soll nur laufen, wenn
+# der Nutzer ihn manuell mit 'tailscale up ...' startet, und nach einem Reboot
+# wieder aus sein. tailscaled selbst laeuft weiter (damit 'tailscale up' greift).
+Description=PiPortal: Tailscale beim Boot getrennt lassen (manuell, nicht persistent)
+After=tailscaled.service network-online.target
+Wants=tailscaled.service
+
+[Service]
+Type=oneshot
+# PATH-Lookup statt fester Pfad (apt legt nach /usr/bin, das Script ggf. /usr/local/bin);
+# no-op, falls tailscale gar nicht installiert ist.
+ExecStart=/bin/sh -c 'command -v tailscale >/dev/null 2>&1 && tailscale down || true'
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

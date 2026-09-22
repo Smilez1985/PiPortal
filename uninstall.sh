@@ -56,7 +56,7 @@ stop_services() {
     # if-Bedingung fälschlich falsch würde und der Block übersprungen bliebe.
     # Stop/Disable sind ohnehin idempotent – wir versuchen sie direkt.
     local unit
-    for unit in piportal-gadget.service piportal-net-detect.service piportal-wifi-roam.service; do
+    for unit in piportal-gadget.service piportal-net-detect.service piportal-wifi-roam.service piportal-tailscale-down.service; do
         systemctl stop "$unit"    >/dev/null 2>&1 || true
         systemctl disable "$unit" >/dev/null 2>&1 || true
         # Verbliebene Wants-Symlinks sicher entfernen (Gürtel + Hosenträger).
@@ -118,6 +118,7 @@ purge_files() {
         /etc/systemd/system/piportal-gadget.service \
         /etc/systemd/system/piportal-net-detect.service \
         /etc/systemd/system/piportal-wifi-roam.service \
+        /etc/systemd/system/piportal-tailscale-down.service \
         /usr/local/sbin/piportal-gadget.sh \
         /usr/local/sbin/piportal-net-detect.sh \
         /usr/local/sbin/piportal-publish.sh \

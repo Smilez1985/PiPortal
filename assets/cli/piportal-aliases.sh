@@ -16,3 +16,7 @@ alias ..='cd ..'
 # Schnellzugriff auf die PiPortal-CLI.
 alias pp='piportal'
 alias ppstatus='piportal --status'
+
+# Tailscale schnell verbinden/trennen (nutzt TAILSCALE_LOGIN_SERVER aus der Config).
+alias tsup='piportal --tailscale-up'
+alias tsdown='piportal --tailscale-down'

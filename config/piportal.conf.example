@@ -96,6 +96,12 @@ PORTAL_IMAGE="/srv/piportal/portal.img"   # read-only FAT-Wegweiser-Image
 # -------------------------------------------------------------------- Extras --
 ENABLE_SSH_HELPER="1"               # connect-piportal.cmd aufs Portal legen
 ENABLE_CLAUDE_CODE="0"              # Node.js LTS + Claude Code CLI installieren (Opt-in)
+ENABLE_TAILSCALE="0"                # Tailscale-CLIENT installieren (Opt-in, KEIN Onboarding, keine Keys).
+                                    # Manuell + nicht persistent: laeuft nur nach 'tailscale up', nach Reboot aus.
+                                    # Braucht ein Tailscale-Konto ODER einen eigenen Headscale-Server.
+                                    # Ohne Server: auf 0 lassen. Onboarding + Anleitung: docs/TAILSCALE.de.md
+TAILSCALE_LOGIN_SERVER=""           # eigene Headscale-URL fuer 'piportal --tailscale-up' (tsup).
+                                    # Leer = Tailscale-Cloud. Bleibt lokal/gitignoriert, NICHT im Repo.
 
 # --- Update-Routine (tools/update) ---
 UPDATE_INTERVAL_DAYS="14"          # Pause (Tage) zwischen Wartungslaeufen (Login-Abfrage)

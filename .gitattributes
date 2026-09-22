@@ -14,8 +14,9 @@ assets/gadget/*.sh         text eol=lf
 *.cmd   text eol=crlf
 *.url   text eol=crlf
 *.vbs   text eol=crlf
-assets/portal/LIESMICH.txt  text eol=crlf
-assets/portal/readme.txt    text eol=crlf
+assets/portal/LIESMICH.txt        text eol=crlf
+assets/portal/readme.txt          text eol=crlf
+assets/portal/PiPortal-Befehle.txt text eol=crlf
 
 # Binärdateien nie anfassen.
 *.jpg   binary

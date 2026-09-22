@@ -46,7 +46,7 @@ module_40_portal_smb() {
     # wenn er das Netzlaufwerk oeffnet. Beide Sprachen + zweisprachige .md,
     # bei jedem Lauf aktualisiert und aus den echten ${PP_*}-Variablen gerendert.
     local doc
-    for doc in LIESMICH.txt readme.txt README.md; do
+    for doc in LIESMICH.txt readme.txt README.md PiPortal-Befehle.txt; do
         if [ -f "${PIPORTAL_ASSETS_DIR}/portal/${doc}" ]; then
             render_asset "${PIPORTAL_ASSETS_DIR}/portal/${doc}" "${SMB_SHARE_PATH}/${doc}" \
                 && chown "${SMB_USER}:${SMB_USER}" "${SMB_SHARE_PATH}/${doc}" 2>/dev/null || true
@@ -148,6 +148,7 @@ build_portal_image() {
     render_asset "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt"              "$sp/LIESMICH.txt"
     render_asset "${PIPORTAL_ASSETS_DIR}/portal/readme.txt"                "$sp/readme.txt"
     render_asset "${PIPORTAL_ASSETS_DIR}/portal/README.md"                 "$sp/README.md"
+    render_asset "${PIPORTAL_ASSETS_DIR}/portal/PiPortal-Befehle.txt"      "$sp/PiPortal-Befehle.txt"
     render_asset "${PIPORTAL_ASSETS_DIR}/portal/PiPortal-Netzlaufwerk.url" "$sp/PiPortal-Netzlaufwerk.url"
     # Optionale/veraltete Helfer erst entfernen (Upgrade-sauber), dann neu setzen.
     # Die frueheren zwei VBS (setzen/vergessen) sind durch die eine SMB-Passwort.vbs ersetzt.

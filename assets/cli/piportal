@@ -363,6 +363,41 @@ cmd_start_claude() {
 }
 
 # ==============================================================================
+#  --tailscale-up / --tailscale-down   (Kurzbefehl fürs manuelle Verbinden)
+#  Der lange 'tailscale up --login-server <URL>' als Einzeiler. Die URL kommt
+#  aus TAILSCALE_LOGIN_SERVER in der Config (bleibt lokal/gitignoriert), NICHT
+#  aus dem Repo. Nicht persistent: hält bis zum nächsten Reboot.
+# ==============================================================================
+cmd_tailscale_up() {
+    if ! command -v tailscale >/dev/null 2>&1; then
+        echo "${RD}Tailscale ist nicht installiert.${R} (Opt-in: ENABLE_TAILSCALE=1 im Installer)"; return 1
+    fi
+    local url="${TAILSCALE_LOGIN_SERVER:-}"
+    # /etc/piportal/piportal.conf ist root-only (0640) – als Nicht-Root kann die
+    # CLI sie nicht sourcen. Die Login-URL ist kein Secret: bei Bedarf per sudo lesen.
+    if [ -z "$url" ]; then
+        url="$(_sudo sh -c '. /etc/piportal/piportal.conf 2>/dev/null; printf "%s" "${TAILSCALE_LOGIN_SERVER:-}"' 2>/dev/null)"
+    fi
+    echo "${CY}${B}Tailscale verbinden…${R} ${DIM}(hält bis zum Reboot)${R}"
+    if [ -n "$url" ]; then
+        echo "  Steuer-URL: ${DIM}${url}${R}"
+        _sudo tailscale up --login-server "$url" "$@"
+    else
+        echo "${YL}  Kein TAILSCALE_LOGIN_SERVER in der Config gesetzt – nutze Tailscale-Cloud ('tailscale up').${R}"
+        echo "  ${DIM}Für eigenes Headscale: TAILSCALE_LOGIN_SERVER=\"https://…\" in /etc/piportal/piportal.conf${R}"
+        _sudo tailscale up "$@"
+    fi
+    local ip; ip="$(tailscale ip -4 2>/dev/null)"
+    [ -n "$ip" ] && echo "${GN}Verbunden.${R} Tailnet-IP: ${B}${ip}${R}  ${DIM}(vom Handy: ssh ${SMB_USER}@${ip})${R}"
+}
+
+cmd_tailscale_down() {
+    command -v tailscale >/dev/null 2>&1 || { echo "${RD}Tailscale ist nicht installiert.${R}"; return 1; }
+    echo "${CY}Tailscale trennen…${R}"
+    _sudo tailscale down && echo "${GN}Getrennt.${R} (nach einem Reboot ohnehin aus)"
+}
+
+# ==============================================================================
 #  Hilfe / Dispatch
 # ==============================================================================
 cmd_help() {
@@ -379,6 +414,8 @@ ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
                           ${DIM}noch keins gesetzt → setzen (keine Daten weg);
                           schon gesetzt → zurücksetzen (löscht Share-Inhalt!)${R}
   ${CY}piportal --publish${R}        Wegweiser-Laufwerk neu bauen + am Host neu einlegen (ohne Abziehen)
+  ${CY}piportal --tailscale-up${R}   Tailscale verbinden (Login-Server aus Config; hält bis Reboot)  ${DIM}[tsup]${R}
+  ${CY}piportal --tailscale-down${R} Tailscale trennen  ${DIM}[tsdown]${R}
   ${CY}piportal start claude${R}     Claude Code CLI starten (installiert sie automatisch, falls nötig)
   ${CY}piportal --help${R}           Diese Hilfe
 
@@ -395,6 +432,8 @@ case "${1:-}" in
     # Ein Werkzeug für beide Fälle; --smb-reset bleibt als Alias erhalten.
     --smb-passwd|smb-passwd|--smb-reset|smb-reset|--smb|smb) cmd_smb_passwd ;;
     --publish|publish)         cmd_publish ;;
+    --tailscale-up|tailscale-up|tsup)     shift 2>/dev/null; cmd_tailscale_up "$@" ;;
+    --tailscale-down|tailscale-down|tsdown) cmd_tailscale_down ;;
     start|--start)             shift 2>/dev/null
                                case "${1:-}" in
                                    claude) cmd_start_claude ;;

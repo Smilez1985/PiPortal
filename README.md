@@ -182,7 +182,7 @@ PiPortal/
 ├── install.sh / uninstall.sh   · One-click installer & rollback
 ├── config/                     · central configuration (template with placeholders)
 ├── lib/ · modules/ · assets/   · installer building blocks, scripts, CLI, portal content
-├── docs/                       · installation, architecture, design, security & roadmap docs (EN/DE)
+├── docs/                       · installation, CLI, architecture, design, security, tailscale & roadmap docs (EN/DE)
 └── images/                     · photos of the device
 ```
 

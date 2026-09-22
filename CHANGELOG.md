@@ -4,6 +4,35 @@
 
 All notable changes to PiPortal. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning per [SemVer](https://semver.org/).
 
+## [1.2.0] — 2026-09-22 15:35 CEST
+
+### Added
+- **CLI shortcut `piportal --tailscale-up` / `--tailscale-down`** (aliases `tsup`/`tsdown`):
+  runs the long `tailscale up --login-server <URL>` as a one-liner and shows the tailnet IP + the
+  phone-SSH command. The URL comes from `TAILSCALE_LOGIN_SERVER` in the **local, gitignored** config
+  (the repo ships only the empty template — no foreign logins). The CLI reads the root-only config
+  for this via `sudo` (config stays `0640`).
+- **`docs/CLI.md` / `docs/CLI.de.md`** – cheat sheet of all `piportal` commands. A short version
+  (`PiPortal-Befehle.txt`) also lives on the signpost drive and the share, for quick reference when
+  you pick the PiPortal up again after months.
+- **Module 55 – Tailscale client (opt-in, `ENABLE_TAILSCALE=1`, off by default)**: on request installs
+  **only** the Tailscale client as preparation, **package-manager-agnostic** — DietPi via the catalog
+  (`dietpi-software 58`), Arch/Alpine natively (`pacman`/`apk`), Debian/Ubuntu/Fedora/RHEL/openSUSE
+  via the official Tailscale install script (correct vendor-repo path per `apt`/`dnf`/`yum`/`zypper`),
+  otherwise the script as a fallback. **No onboarding**, **no** keys/URLs/data in the repo — signing in
+  (`tailscale up …`) is up to the user.
+- **Deliberately manual and non-persistent**: `tailscaled` runs (so `tailscale up` works), a boot hook
+  (`piportal-tailscale-down.service`) leaves Tailscale **disconnected after every reboot**. It only runs
+  after a manual `tailscale up …` and is off again after a reboot — which also prevents the subnet
+  self-hijack when the PiPortal is on the home network.
+- **`docs/TAILSCALE.md` / `docs/TAILSCALE.de.md`**: onboarding guide, making clear the feature requires
+  a Tailscale account **or** a self-hosted Headscale server (with no server the opt-in stays 0). Covers
+  the cloud/Headscale paths, manual reconnect, reaching the PiPortal from a phone via the **tailnet IP**
+  (`100.64.x.x`, network-independent), the `--accept-routes` caveat for the on-LAN device
+  (split tunnel ≠ exit node), and the DNS-rebind gotcha.
+
+---
+
 ## [1.1.0] — 2026-09-22 06:41 CEST
 
 Follow-up work after the first hardware release, all verified live on the device.

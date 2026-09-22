@@ -181,7 +181,7 @@ PiPortal/
 ├── install.sh / uninstall.sh   · Ein-Klick-Installer & Rollback
 ├── config/                     · zentrale Konfiguration (Vorlage mit Platzhaltern)
 ├── lib/ · modules/ · assets/   · Installer-Bausteine, Skripte, CLI, Portal-Inhalt
-├── docs/                       · Installation, Architektur, Design, Security & Roadmap (DE/EN)
+├── docs/                       · Installation, CLI, Architektur, Design, Security, Tailscale & Roadmap (DE/EN)
 └── images/                     · Fotos des Geräts
 ```
 
