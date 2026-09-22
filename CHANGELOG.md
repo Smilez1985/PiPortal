@@ -41,6 +41,21 @@ First complete, hardware-verified release. Live-tested on Windows 11: the RNDIS 
 - **Security & roadmap docs**: [`docs/SECURITY.md`](docs/SECURITY.md) (Security-by-Design barriers +
   dual-use disclaimer) and [`docs/ROADMAP.md`](docs/ROADMAP.md) (planned admin toolbox / Cowork
   integration, NCM profile, publish cycle). Both bilingual (EN/DE).
+- **Update routine** (`tools/update/`, installed by module 47): modular, fail-safe maintenance
+  (`system` → `harden_wlan` → `piportal` self-update → `claude`, each strictly "if exist"). No auto-update
+  at boot — a login prompt asks when a run is **due** (default every 14 days) and, if you run it, whether
+  to auto-reboot afterwards.
+- **WLAN SAE hardening** (`harden_wlan` + live guard): protects against the `brcmfmac` WPA3/SAE regression
+  (`feature_disable=0x2282000` in `cmdline.txt` + modprobe.d) so an OS update's reboot cannot kill Wi-Fi on
+  a WPA2/WPA3-transition access point.
+- **Network-share credential tools**: `piportal --smb-passwd` (first-time setup / password change, no data loss)
+  and `piportal --smb-reset` (full reset incl. wipe), plus the Windows helpers `SMB-Passwort_setzen.vbs` and
+  `SMB-Passwort_vergessen.vbs` on the signpost drive. Authorization is the SSH login. `LIESMICH.txt` is now
+  also placed on the share (H:) and notes the Windows login form (`10.10.0.1\dietpi`).
+- **mDNS via avahi** so `\\PiPortal.local` resolves from the host (NetBIOS stays off). Hostname set to
+  `PiPortal` by module 01.
+- **`piportal start claude`**: launches the Claude Code CLI, installing it (latest, no pin) on first use.
+- **Gadget default corrected** to `portal.img` (was a stale `.iso`) so the read-only signpost survives a reboot.
 
 ### Fixed
 - **Windows host received no DHCP address (ended up on APIPA 169.254.x.x):** The

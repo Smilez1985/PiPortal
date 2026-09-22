@@ -25,7 +25,7 @@ Gedacht ist das Ganze als **mobiles Schweizer Taschenmesser für Technikbegeiste
 
 ## Was kann PiPortal?
 
-- **Einstecken und loslegen** — kein Treiber, keine Installation am PC nötig; unter Windows erscheint automatisch eine Netzwerkkarte und ein Laufwerk.
+- **Einstecken und loslegen** — das Laufwerk braucht keinen Treiber; unter Windows 7–10 und vielen Win11-PCs erscheint auch die Netzwerkkarte automatisch. (Auf aktuellem Windows 11 wird RNDIS ausgemustert und die Netzwerkseite braucht evtl. eine einmalige Treiberfreigabe mit Adminrechten — siehe [`docs/SECURITY.de.md`](docs/SECURITY.de.md).)
 - **Eigenes Internet** — der Stick hängt per WLAN an einem eigenen Netz (Router oder Handy-Hotspot) und hält die Verbindung selbst dann, wenn man den Raum wechselt.
 - **Saubere Trennung** — der Internetverkehr läuft bewusst nur über das WLAN des Sticks, nie über den PC. Dessen Verbindung bleibt komplett unberührt.
 - **Sicherer Dateiaustausch** — statt eines beschreibbaren USB-Laufwerks (das bei gleichzeitigem Zugriff kaputtgehen kann) gibt es einen schreibgeschützten „Wegweiser" und einen echten, passwortgeschützten Netzwerkordner.
@@ -129,7 +129,7 @@ PiPortal baut ein **configfs/libcomposite USB-Composite-Gadget** (Single-Config,
 
 | Funktion | Zweck | Host-Sicht |
 |---|---|---|
-| **RNDIS** (mit MS-OS-Descriptors) | USB-Netzwerk, treiberlos | Windows 7–11 (Inbox-Treiber) |
+| **RNDIS** (mit MS-OS-Descriptors) | USB-Netzwerk (Inbox-Treiber) | Win 7–10 & viele Win11 automatisch; aktuelles Win11 evtl. 1× Treiber mit Admin |
 | **Mass Storage** (read-only FAT) | Wegweiser zum SMB-Share | alle |
 
 Der Datentausch läuft über **gehärtetes SMB** (`\\10.10.0.1\PiPortal`, SMB2+/SMB3, kein Gast). dnsmasq verteilt dem PC eine Adresse, **ohne** dessen Internet-Gateway zu kapern.

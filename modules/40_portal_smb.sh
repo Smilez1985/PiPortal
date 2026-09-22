@@ -2,13 +2,14 @@
 # =============================================================================
 #  PiPortal – Modul 40: SMB-Portal
 #  - Installiert & härtet Samba (SMB2+/SMB3, kein Gast, ein User, nur usb0).
-#  - Baut das read-only CD-ROM-Wegweiser-Image (ISO9660).
+#  - Baut das read-only FAT-Wegweiser-Image (ro=1, removable=1).
 # =============================================================================
 
 module_40_portal_smb() {
     log_step "Phase 4 – SMB-Portal + Wegweiser-Image"
 
-    ensure_pkg samba samba-common-bin dosfstools mtools
+    # avahi-daemon: macht \\PiPortal.local auflösbar (NetBIOS ist bewusst aus).
+    ensure_pkg samba samba-common-bin dosfstools mtools avahi-daemon
 
     # --- 0. Unix-Benutzer sicherstellen (smbpasswd -a braucht ihn) ---
     if id -u "${SMB_USER}" >/dev/null 2>&1; then
@@ -21,6 +22,13 @@ module_40_portal_smb() {
 
     # --- 1. Share-Verzeichnis ---
     ensure_dir "${SMB_SHARE_PATH}" 2775 "${SMB_USER}:${SMB_USER}"
+
+    # Kurz-Anleitung auch auf den Share (H:) legen – das ist, was der Nutzer
+    # sieht, wenn er das Netzlaufwerk oeffnet. Wird bei jedem Lauf aktualisiert.
+    if [ -f "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" ]; then
+        install -m 0644 -o "${SMB_USER}" -g "${SMB_USER}" \
+            "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" "${SMB_SHARE_PATH}/LIESMICH.txt" 2>/dev/null || true
+    fi
 
     # --- 2. Gehärtete Samba-Konfiguration (PiPortal-Block, restliche smb.conf bleibt) ---
     write_file_if_changed /etc/samba/smb.conf 0644 <<EOF
@@ -84,12 +92,17 @@ EOF
             printf '%s\n%s\n' "$pw" "$pw" | smbpasswd -a -s "${SMB_USER}" >/dev/null \
                 && log_ok "SMB-Benutzer '${SMB_USER}' angelegt."
         else
-            log_warn "Kein SMB-Passwort gesetzt – bitte später:  sudo smbpasswd -a ${SMB_USER}"
+            log_warn "Kein SMB-Passwort gesetzt. Vor der ersten Nutzung setzen mit:"
+            log_info "   piportal --smb-passwd   (oder auf dem Laufwerk: SMB-Passwort_setzen.vbs)"
         fi
     fi
 
     systemctl restart smbd 2>/dev/null || systemctl restart smb 2>/dev/null || true
     log_ok "Samba neu gestartet."
+
+    # mDNS aktivieren, damit \\PiPortal.local vom Host aufgelöst wird.
+    systemctl enable --now avahi-daemon >/dev/null 2>&1 || true
+    log_ok "mDNS (avahi) aktiv – \\\\${PIPORTAL_HOSTNAME:-PiPortal}.local nutzbar."
 
     # --- 4. Wegweiser-Image bauen (read-only FAT) ---
     build_portal_image
@@ -103,6 +116,11 @@ build_portal_image() {
     cp "${PIPORTAL_ASSETS_DIR}/portal/LIESMICH.txt" "$staging/"
     cp "${PIPORTAL_ASSETS_DIR}/portal/PiPortal-Netzlaufwerk.url" "$staging/"
     [ "${ENABLE_SSH_HELPER}" = "1" ] && cp "${PIPORTAL_ASSETS_DIR}/windows/connect-piportal.cmd" "$staging/"
+    # Erst-Einrichtung: Passwort setzen (keine Daten weg) + Reset (mit Loeschen).
+    cp "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort_setzen.vbs"    "$staging/" 2>/dev/null || true
+    cp "${PIPORTAL_ASSETS_DIR}/windows/SMB-Passwort_vergessen.vbs" "$staging/" 2>/dev/null || true
+    # Claude-Code-Starter nur, wenn das KI-Labor aktiviert ist.
+    [ "${ENABLE_CLAUDE_CODE}" = "1" ] && cp "${PIPORTAL_ASSETS_DIR}/windows/Claude-Code.vbs" "$staging/" 2>/dev/null || true
 
     ensure_dir "$(dirname "${PORTAL_IMAGE}")"
     local newimg; newimg="$(mktemp --suffix=.img)"

@@ -280,3 +280,38 @@ derive_mac() {
     printf '02:%s:%s:%s:%s:%s\n' \
         "${hash:0:2}" "${hash:2:2}" "${hash:4:2}" "${hash:6:2}" "${hash:8:2}"
 }
+
+# ----------------------------------------------------- WLAN SAE-Haertung -----
+# Verhindert die brcmfmac-WPA3/SAE-Regression, die ein Update-Reboot an einem
+# WPA2/WPA3-Transition-AP das WLAN kosten kann: SAE_EXT (Bit 25) zusaetzlich
+# abschalten -> feature_disable=0x282000 | 0x2000000 = 0x2282000. Wirksam ist
+# die Kernel-Kommandozeile (gilt immer), modprobe.d ist die zweite Absicherung.
+# Nur bei brcmfmac, idempotent, atomar, mit Backup. Wirkt erst nach einem Reboot.
+harden_wlan_sae() {
+    local drv
+    drv="$(basename "$(readlink -f /sys/class/net/wlan0/device/driver 2>/dev/null)" 2>/dev/null)"
+    if [ "$drv" != "brcmfmac" ]; then
+        log_skip "WLAN-Chip '${drv:-unbekannt}' – keine SAE-Haertung noetig."
+        return 0
+    fi
+    printf 'options brcmfmac roamoff=1 feature_disable=0x2282000\n' \
+        | write_file_if_changed /etc/modprobe.d/rpi-brcmfmac-sae.conf 0644
+
+    local cmd="/boot/firmware/cmdline.txt" tok="brcmfmac.feature_disable=0x2282000"
+    if [ ! -f "$cmd" ]; then
+        log_warn "cmdline.txt fehlt – SAE-Haertung nur ueber modprobe.d gesetzt."
+    elif grep -q 'feature_disable=0x2282000' "$cmd"; then
+        log_skip "WLAN-SAE-Haertung in cmdline bereits gesetzt."
+    else
+        backup_now "$cmd" >/dev/null
+        local line; line="$(tr -d '\n' < "$cmd")"
+        printf '%s %s\n' "$line" "$tok" > "${cmd}.new"
+        if [ "$(wc -l < "${cmd}.new")" -eq 1 ] && grep -q 'root=' "${cmd}.new" && grep -q "$tok" "${cmd}.new"; then
+            mv "${cmd}.new" "$cmd"
+            log_ok "WLAN-SAE-Haertung in cmdline gesetzt (wirkt nach dem naechsten Reboot)."
+        else
+            rm -f "${cmd}.new"
+            log_warn "cmdline-Sanity fehlgeschlagen – SAE-Haertung in cmdline uebersprungen."
+        fi
+    fi
+}

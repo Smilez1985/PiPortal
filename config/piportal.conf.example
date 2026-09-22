@@ -80,7 +80,11 @@ PORTAL_IMAGE="/srv/piportal/portal.img"   # read-only FAT-Wegweiser-Image
 
 # -------------------------------------------------------------------- Extras --
 ENABLE_SSH_HELPER="1"               # connect-piportal.cmd aufs Portal legen
-ENABLE_CLAUDE_CODE="0"              # Node.js LTS + Claude Code CLI installieren
+ENABLE_CLAUDE_CODE="0"              # Node.js LTS + Claude Code CLI installieren (Opt-in)
+
+# --- Update-Routine (tools/update) ---
+UPDATE_INTERVAL_DAYS="14"          # Pause (Tage) zwischen Wartungslaeufen (Login-Abfrage)
+UPDATE_REBOOT_MODE="ask"           # ask | auto | manual  – Reboot nach Updates
 
 # -------------------------------------------------------------- Swap & zram --
 # SD-Swapfile-Größe. "auto" = nach SD-Kartengröße staffeln:

@@ -1,5 +1,5 @@
 [Unit]
-Description=PiPortal USB Composite Gadget (RNDIS + ECM + Mass Storage)
+Description=PiPortal USB Composite Gadget (RNDIS + Mass Storage)
 Documentation=file:/etc/piportal/piportal.conf
 # configfs muss gemountet sein, bevor das Gadget gebaut wird.
 After=sys-kernel-config.mount systemd-modules-load.service

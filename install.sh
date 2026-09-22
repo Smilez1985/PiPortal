@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/lib/common.sh"
 
 # Reihenfolge der Phasen (Dateiname ohne .sh, Funktionsname = module_<name>).
-PHASES=(00_backup 01_hostname 05_swap 10_network_usb 15_boot_tuning 20_wifi_roaming 30_gadget 40_portal_smb 45_cli 50_extras)
+PHASES=(00_backup 01_hostname 05_swap 10_network_usb 15_boot_tuning 20_wifi_roaming 30_gadget 40_portal_smb 45_cli 47_updater 50_extras)
 
 usage() {
     cat <<'EOF'
@@ -43,7 +43,8 @@ Phasen:
   20_wifi_roaming     WLAN-Profile + Roaming-Service
   30_gadget           configfs-Composite-Gadget (RNDIS + Mass Storage)
   40_portal_smb       Samba gehärtet + Wegweiser-Image
-  45_cli              piportal-CLI (--status/--wifi-switch/--update) + Aliase
+  45_cli              piportal-CLI (--status/--wifi-switch/--update/--smb-reset) + Aliase
+  47_updater          Update-Routine (tools/update) + Login-Abfrage
   50_extras           SSH-Helper, optional Claude Code CLI
 EOF
 }

@@ -23,7 +23,7 @@ PiPortal is a **transparent, defensive** administration and lab tool. It is deli
 3. **Read-only signpost volume.** The emulated USB drive is mounted **read-only** (`ro=1`) for the host. It cannot be used to silently copy files or malware *off* the host onto the Pi through the drive.
 4. **Authenticated SMB, no guest access.** The actual data store requires a username and password (`map to guest = Never`, `restrict anonymous = 2`, `valid users`). Merely plugging the dongle in grants no access to any files.
 5. **No hardcoded secrets.** The repository contains no passwords, API tokens, or private IP addresses. Every sensitive value is set up individually at install time.
-6. **Runs only where invited.** RNDIS binding is a *usability* feature (it works without a driver install on Windows) — it is **not** claimed here as a security barrier. The barriers above are the ones that actually constrain misuse.
+6. **On modern Windows, bringing up the network face can itself require admin.** Microsoft is phasing out the RNDIS inbox driver; on current Windows 10/11 it no longer reliably auto-installs, so on a locked-down PC where you lack admin rights the network adapter may simply not come up. This is not an absolute barrier — it still auto-binds on Windows 7–10 and many Win11 installs — but PiPortal's network side cannot be counted on to silently attach to a hardened, admin-restricted host.
 
 ---
 

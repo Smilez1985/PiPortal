@@ -34,7 +34,7 @@ Eine Live-Recon per SSH ermittelte die Wahrheit, bevor irgendetwas geändert wur
 Drei Architektur-Entscheidungen wurden gegen aktuelle Best Practice validiert, bevor am laufenden Gerät etwas angefasst wurde (volle Begründung + Quellen in [`ARCHITECTURE.de.md`](ARCHITECTURE.de.md)):
 
 1. **Gadget-Technik → configfs / libcomposite** (`g_multi` ausmustern).
-2. **Windows-Netzwerk → RNDIS + MS-OS-Descriptors** (der einzige No-Admin-Inbox-Treiber über Win7–11).
+2. **Windows-Netzwerk → RNDIS + MS-OS-Descriptors** (die reichweitenstärkste Windows-Ethernet-Option; siehe die RNDIS/Win11-Einschränkung in [`ARCHITECTURE.de.md`](ARCHITECTURE.de.md)).
 3. **Speicher → read-only-Wegweiser + gehärtetes SMB für alle echten Daten** (Korruptionsrisiko beseitigen).
 
 Daneben eine feste Liste von Korrekturen, unabhängig von den großen Entscheidungen: dnsmasq-Gateway/DNS-Optionen unterdrücken (K1), nie beschreibbaren Speicher ausliefern (K2), alle Secrets in eine gitignorierte Config auslagern (K3), die fragile Roaming-Schleife durch einen systemd-Dienst ersetzen (K4), verwaiste statische Zeilen in `interfaces` aufräumen (K5), Samba installieren und härten (K6) und das Node-/Claude-Code-Labor zu einem optionalen, abschaltbaren Modul machen (K7).

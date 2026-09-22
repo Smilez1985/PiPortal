@@ -34,7 +34,7 @@ A live recon over SSH established the ground truth before anything was changed. 
 Three architecture decisions were validated against current best practice before touching the running device (full rationale + sources in [`ARCHITECTURE.md`](ARCHITECTURE.md)):
 
 1. **Gadget technique → configfs / libcomposite** (retire `g_multi`).
-2. **Windows networking → RNDIS + MS-OS descriptors** (the only no-admin inbox driver across Win7–11).
+2. **Windows networking → RNDIS + MS-OS descriptors** (the widest-reaching Windows-Ethernet option; see the RNDIS/Win11 caveat in [`ARCHITECTURE.md`](ARCHITECTURE.md)).
 3. **Storage → a read-only signpost + hardened SMB for all real data** (kill the corruption risk).
 
 Alongside these, a fixed list of corrections applied regardless of the big decisions: suppress the dnsmasq gateway/DNS options (K1), never ship writable storage (K2), move all secrets to a gitignored config (K3), replace the fragile roaming loop with a systemd service (K4), tidy orphaned static lines in `interfaces` (K5), install and harden Samba (K6), and make the Node/Claude-Code lab an optional, switchable module (K7).

@@ -165,6 +165,151 @@ cmd_update() {
 }
 
 # ==============================================================================
+#  --smb-passwd   (Netzlaufwerk-Passwort SETZEN/aendern – keine Daten geloescht)
+#  Fuer die Erst-Einrichtung und spaetere Passwortwechsel.
+# ==============================================================================
+cmd_smb_passwd() {
+    local user="${SMB_USER:-dietpi}"
+    local share_name="${SMB_SHARE_NAME:-PiPortal}"
+    local share_path="${SMB_SHARE_PATH:-/srv/piportal/share}"
+    local smbconf="/etc/samba/smb.conf"
+
+    echo
+    echo "${CY}${B}PiPortal – Netzlaufwerk-Passwort setzen/ändern${R}"
+    echo "  Benutzer: ${B}${user}${R}   (Enter = beibehalten). ${DIM}Dateien bleiben unangetastet.${R}"
+    local newuser
+    read -r -p "SMB-Benutzername [${user}]: " newuser
+    newuser="${newuser:-$user}"
+
+    local pw1 pw2
+    read -r -s -p "Neues Passwort: " pw1; echo
+    read -r -s -p "Passwort wiederholen: " pw2; echo
+    if [ -z "$pw1" ] || [ "$pw1" != "$pw2" ]; then
+        echo "${RD}Passwoerter leer oder ungleich - Abbruch.${R}"; return 1
+    fi
+
+    if ! id -u "$newuser" >/dev/null 2>&1; then
+        echo "${CY}» Lege Systembenutzer '${newuser}' an…${R}"
+        _sudo useradd -m -s /bin/bash "$newuser" || { echo "${RD}Benutzer anlegen fehlgeschlagen.${R}"; return 1; }
+    fi
+    if [ "$newuser" != "$user" ] && [ -f "$smbconf" ]; then
+        _sudo sed -i -E \
+            "s/^([[:space:]]*valid users[[:space:]]*=).*/\1 ${newuser}/; \
+             s/^([[:space:]]*force user[[:space:]]*=).*/\1 ${newuser}/; \
+             s/^([[:space:]]*force group[[:space:]]*=).*/\1 ${newuser}/" "$smbconf"
+        _sudo chown "${newuser}:${newuser}" "$share_path" 2>/dev/null || true
+    fi
+    if printf '%s\n%s\n' "$pw1" "$pw1" | _sudo smbpasswd -a -s "$newuser" >/dev/null; then
+        _sudo systemctl restart smbd 2>/dev/null || _sudo systemctl restart smb 2>/dev/null || true
+        echo "${GN}${B}Passwort gesetzt.${R} Zugang:  \\\\${USB_LAN_IP}\\${share_name}   (Benutzer: ${B}${newuser}${R})"
+    else
+        echo "${RD}smbpasswd fehlgeschlagen.${R}"; return 1
+    fi
+}
+
+# ==============================================================================
+#  --smb-reset   (Netzlaufwerk-Zugang zuruecksetzen; Berechtigung = SSH-Login)
+# ==============================================================================
+cmd_smb_reset() {
+    local user="${SMB_USER:-dietpi}"
+    local share_name="${SMB_SHARE_NAME:-PiPortal}"
+    local share_path="${SMB_SHARE_PATH:-/srv/piportal/share}"
+    local smbconf="/etc/samba/smb.conf"
+
+    echo
+    echo "${RD}${B}==================== PiPortal SMB-Reset ====================${R}"
+    echo "${YL}ACHTUNG:${R} Setzt den Zugang zum PiPortal-Netzlaufwerk zurueck."
+    echo "  - ${RD}${B}ALLE Dateien im Share werden GELOESCHT${R}: ${share_path}"
+    echo "  - Benutzer und Passwort werden neu vergeben (Repo-Standard)."
+    echo "  - Aktueller SMB-Benutzer: ${B}${user}${R}"
+    echo
+    local confirm
+    read -r -p "Zum Fortfahren exakt  RESET  eingeben (sonst Abbruch): " confirm
+    [ "$confirm" = "RESET" ] || { echo "Abgebrochen."; return 0; }
+
+    local newuser
+    read -r -p "Neuer SMB-Benutzername [${user}]: " newuser
+    newuser="${newuser:-$user}"
+
+    local pw1 pw2
+    read -r -s -p "Neues Passwort: " pw1; echo
+    read -r -s -p "Passwort wiederholen: " pw2; echo
+    if [ -z "$pw1" ] || [ "$pw1" != "$pw2" ]; then
+        echo "${RD}Passwoerter leer oder ungleich - Abbruch.${R}"; return 1
+    fi
+
+    # 1) Systembenutzer sicherstellen.
+    if ! id -u "$newuser" >/dev/null 2>&1; then
+        echo "${CY}» Lege Systembenutzer '${newuser}' an…${R}"
+        _sudo useradd -m -s /bin/bash "$newuser" || { echo "${RD}Benutzer anlegen fehlgeschlagen.${R}"; return 1; }
+    fi
+
+    # 2) smb.conf auf neuen Benutzer umstellen (nur die relevanten Zeilen).
+    if [ "$newuser" != "$user" ] && [ -f "$smbconf" ]; then
+        _sudo sed -i -E \
+            "s/^([[:space:]]*valid users[[:space:]]*=).*/\1 ${newuser}/; \
+             s/^([[:space:]]*force user[[:space:]]*=).*/\1 ${newuser}/; \
+             s/^([[:space:]]*force group[[:space:]]*=).*/\1 ${newuser}/" "$smbconf"
+    fi
+
+    # 3) Share leeren + Rechte auf Repo-Standard.
+    echo "${CY}» Leere Share ${share_path}…${R}"
+    _sudo mkdir -p "$share_path"
+    _sudo find "$share_path" -mindepth 1 -delete 2>/dev/null || true
+    _sudo chown "${newuser}:${newuser}" "$share_path"
+    _sudo chmod 2775 "$share_path"
+
+    # 4) connect-Helfer (Repo-Standard) wiederherstellen, falls Quelle auffindbar.
+    local helper
+    for helper in /home/*/PiPortal/assets/windows/connect-piportal.cmd /opt/PiPortal/assets/windows/connect-piportal.cmd; do
+        [ -f "$helper" ] || continue
+        _sudo cp "$helper" "${share_path}/connect-piportal.cmd"
+        _sudo chown "${newuser}:${newuser}" "${share_path}/connect-piportal.cmd"
+        break
+    done
+
+    # 5) Altes SMB-Konto bei Benutzerwechsel entfernen, neues Passwort setzen.
+    [ "$newuser" != "$user" ] && _sudo smbpasswd -x "$user" 2>/dev/null || true
+    if printf '%s\n%s\n' "$pw1" "$pw1" | _sudo smbpasswd -a -s "$newuser" >/dev/null; then
+        echo "${GN}SMB-Benutzer '${newuser}' neu gesetzt.${R}"
+    else
+        echo "${RD}smbpasswd fehlgeschlagen.${R}"; return 1
+    fi
+
+    # 6) Konfiguration pruefen + Dienst neu starten.
+    if _sudo testparm -s >/dev/null 2>&1; then
+        _sudo systemctl restart smbd 2>/dev/null || _sudo systemctl restart smb 2>/dev/null || true
+        echo "${GN}${B}Fertig.${R} Zugang:  \\\\${USB_LAN_IP}\\${share_name}   (Benutzer: ${B}${newuser}${R})"
+    else
+        echo "${RD}smb.conf fehlerhaft nach Aenderung - bitte pruefen.${R}"; return 1
+    fi
+}
+
+# ==============================================================================
+#  start claude   (Claude Code CLI starten; installiert sie, falls nicht da)
+# ==============================================================================
+cmd_start_claude() {
+    if ! command -v claude >/dev/null 2>&1; then
+        echo "${YL}Claude Code CLI nicht installiert – installiere jetzt (neueste Version)…${R}"
+        if ! command -v node >/dev/null 2>&1; then
+            echo "${CY}» Node.js LTS…${R}"
+            _sudo apt-get install -y ca-certificates curl \
+                || { echo "${RD}Abbruch: curl/ca-certificates nicht installierbar.${R}"; return 1; }
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | _sudo -E bash - >/dev/null 2>&1 \
+                || { echo "${RD}NodeSource-Setup fehlgeschlagen.${R}"; return 1; }
+            _sudo apt-get install -y nodejs \
+                || { echo "${RD}Node.js-Installation fehlgeschlagen.${R}"; return 1; }
+        fi
+        echo "${CY}» npm i -g @anthropic-ai/claude-code@latest…${R}"
+        _sudo npm install -g @anthropic-ai/claude-code@latest \
+            || { echo "${RD}Claude-Code-Installation fehlgeschlagen.${R}"; return 1; }
+        echo "${GN}Claude Code CLI installiert.${R}"
+    fi
+    echo "${CY}» starte claude…${R}"
+    exec claude
+}
+
+# ==============================================================================
 #  Hilfe / Dispatch
 # ==============================================================================
 cmd_help() {
@@ -176,6 +321,9 @@ ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
   ${CY}piportal --wifi-switch next${R}  Zum nächsten konfigurierten WLAN rotieren
   ${CY}piportal --wifi-switch <id>${R}  Gezielt zu WLAN-ID wechseln
   ${CY}piportal --update${R}         dietpi-update + apt upgrade + Reboot (mit -y ohne Rückfrage)
+  ${CY}piportal --smb-passwd${R}     Netzlaufwerk-Passwort setzen/ändern (Erst-Einrichtung, keine Daten weg)
+  ${CY}piportal --smb-reset${R}      Netzlaufwerk-Zugang zurücksetzen (löscht Share-Inhalt!)
+  ${CY}piportal start claude${R}     Claude Code CLI starten (installiert sie automatisch, falls nötig)
   ${CY}piportal --help${R}           Diese Hilfe
 
 Tipp: Vom Host-PC per USB erreichbar mit  ${DIM}ssh dietpi@${USB_LAN_IP}${R}  –
@@ -187,6 +335,13 @@ case "${1:-}" in
     --status|status|-s)        cmd_status ;;
     --wifi-switch|wifi-switch|-w) shift 2>/dev/null; cmd_wifi_switch "${1:-}" ;;
     --update|update|-u)        shift 2>/dev/null; cmd_update "${1:-}" ;;
+    --smb-passwd|smb-passwd)   cmd_smb_passwd ;;
+    --smb-reset|smb-reset)     cmd_smb_reset ;;
+    start|--start)             shift 2>/dev/null
+                               case "${1:-}" in
+                                   claude) cmd_start_claude ;;
+                                   *) echo "${RD}Unbekannt: start ${1:-}${R}"; echo "  Verfügbar: ${CY}piportal start claude${R}"; exit 1 ;;
+                               esac ;;
     --help|help|-h|"")         cmd_help ;;
     *) echo "${RD}Unbekannter Befehl: $1${R}"; echo; cmd_help; exit 1 ;;
 esac

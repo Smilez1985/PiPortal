@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 #  PiPortal – USB-Composite-Gadget (configfs / libcomposite)
-#  Baut RNDIS (Windows) + CDC-ECM (Linux/macOS) + Mass Storage (CD-ROM, RO).
+#  Baut RNDIS (Windows) + Mass Storage (read-only FAT). CDC-ECM/NCM optional,
+#  per Default aus (Multi-Config bricht die Windows-Treiberbindung).
 #
 #  Wird von der systemd-Unit piportal-gadget.service aufgerufen.
 #  Aufruf:  piportal-gadget.sh {up|down|restart|status}
@@ -28,7 +29,7 @@ ENABLE_RNDIS="1"
 ENABLE_ECM="0"
 ENABLE_NCM="0"
 ENABLE_MASS_STORAGE="1"
-PORTAL_IMAGE="/srv/piportal/portal.iso"
+PORTAL_IMAGE="/srv/piportal/portal.img"
 
 # shellcheck disable=SC1090
 [ -f "$CONF" ] && . "$CONF"

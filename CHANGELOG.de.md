@@ -41,6 +41,22 @@ Erste vollständige, an Hardware verifizierte Fassung. Live an Windows 11 getest
 - **Security- & Roadmap-Doku**: [`docs/SECURITY.de.md`](docs/SECURITY.de.md) („Security by Design"-Barrieren +
   Dual-Use-Disclaimer) und [`docs/ROADMAP.de.md`](docs/ROADMAP.de.md) (geplanter Admin-Werkzeugkasten /
   Cowork-Integration, NCM-Profil, Publish-Zyklus). Beide zweisprachig (EN/DE).
+- **Update-Routine** (`tools/update/`, installiert von Modul 47): modulare, ausfallsichere Wartung
+  (`system` → `harden_wlan` → `piportal`-Self-Update → `claude`, jeweils strikt „if exist"). Kein
+  Auto-Update beim Boot — eine Login-Abfrage fragt, wenn ein Lauf **fällig** ist (Standard alle 14 Tage),
+  und bei „jetzt" auch, ob danach automatisch neu gestartet werden soll.
+- **WLAN-SAE-Härtung** (`harden_wlan` + Live-Schutz): schützt vor der `brcmfmac`-WPA3/SAE-Regression
+  (`feature_disable=0x2282000` in `cmdline.txt` + modprobe.d), damit der Reboot eines OS-Updates das WLAN
+  an einem WPA2/WPA3-Transition-AP nicht abwürgt.
+- **Netzlaufwerk-Zugangsdaten-Werkzeuge**: `piportal --smb-passwd` (Erst-Einrichtung / Passwortwechsel, keine
+  Daten weg) und `piportal --smb-reset` (voller Reset inkl. Löschen), dazu die Windows-Helfer
+  `SMB-Passwort_setzen.vbs` und `SMB-Passwort_vergessen.vbs` auf dem Wegweiser-Laufwerk. Berechtigung ist der
+  SSH-Login. `LIESMICH.txt` liegt jetzt auch auf dem Share (H:) und nennt die Windows-Login-Form
+  (`10.10.0.1\dietpi`).
+- **mDNS via avahi**, damit `\\PiPortal.local` vom Host auflöst (NetBIOS bleibt aus). Hostname wird von
+  Modul 01 auf `PiPortal` gesetzt.
+- **`piportal start claude`**: startet die Claude Code CLI und installiert sie beim ersten Mal (neueste, kein Pin).
+- **Gadget-Default korrigiert** auf `portal.img` (war ein veraltetes `.iso`), damit der read-only-Wegweiser einen Reboot übersteht.
 
 ### Behoben
 - **Windows-Host bekam keine DHCP-Adresse (landete auf APIPA 169.254.x.x):** Die

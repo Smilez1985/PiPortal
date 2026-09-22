@@ -43,13 +43,20 @@ list_backups() {
 
 stop_services() {
     log_step "PiPortal-Dienste stoppen"
+    # Kein 'list-unit-files | grep -q'-Guard: unter 'set -o pipefail' liefert die
+    # Pipeline bei einem frühen grep-Treffer via SIGPIPE einen Fehler, wodurch die
+    # if-Bedingung fälschlich falsch würde und der Block übersprungen bliebe.
+    # Stop/Disable sind ohnehin idempotent – wir versuchen sie direkt.
     local unit
     for unit in piportal-gadget.service piportal-wifi-roam.service; do
-        if systemctl list-unit-files 2>/dev/null | grep -q "^${unit}"; then
-            systemctl disable --now "$unit" >/dev/null 2>&1 || true
-            log_ok "Gestoppt/deaktiviert: $unit"
-        fi
+        systemctl stop "$unit"    >/dev/null 2>&1 || true
+        systemctl disable "$unit" >/dev/null 2>&1 || true
+        # Verbliebene Wants-Symlinks sicher entfernen (Gürtel + Hosenträger).
+        rm -f "/etc/systemd/system/sysinit.target.wants/${unit}" \
+              "/etc/systemd/system/multi-user.target.wants/${unit}" 2>/dev/null || true
+        log_ok "Gestoppt/deaktiviert: $unit"
     done
+    systemctl daemon-reload 2>/dev/null || true
 }
 
 restore_backup() {
@@ -62,6 +69,13 @@ restore_backup() {
     local item
     while IFS= read -r item; do
         case "$item" in ''|'#'*|'PiPortal-Backup'*|'Host:'*|'---') continue ;; esac
+        # GESCHUETZT: wpa_supplicant.conf (WLAN-Zugang) und cmdline.txt (SAE-Haertung)
+        # werden NIE zurueckgespielt – das Geraet muss nach dem Uninstall im WLAN
+        # (und damit per SSH) erreichbar bleiben.
+        case "$item" in
+            */wpa_supplicant.conf|*/cmdline.txt)
+                log_skip "Geschuetzt (WLAN/SSH bleibt erhalten): $item"; continue ;;
+        esac
         local stored="${src}${item}"
         if [ -e "$stored" ]; then
             ensure_dir "$(dirname "$item")" >/dev/null
@@ -74,6 +88,18 @@ restore_backup() {
     log_ok "Rücksicherung abgeschlossen."
 }
 
+# Entfernt das Wegweiser-Image (generierter Signpost, KEIN Nutzerdatum). Immer
+# sicher: das PiPortal-Laufwerk verschwindet damit nach dem Reboot.
+remove_portal_image() {
+    local img="${PORTAL_IMAGE:-/srv/piportal/portal.img}"
+    if [ -f "$img" ]; then
+        rm -f "$img"
+        log_ok "Portal-Image entfernt: $img (PiPortal-Laufwerk verschwindet nach dem Reboot)."
+    else
+        log_skip "Kein Portal-Image vorhanden ($img)."
+    fi
+}
+
 purge_files() {
     log_step "PiPortal-Dateien entfernen (--purge)"
     local f
@@ -82,15 +108,45 @@ purge_files() {
         /etc/systemd/system/piportal-wifi-roam.service \
         /usr/local/sbin/piportal-gadget.sh \
         /usr/local/sbin/piportal-wifi-roam.sh \
+        /usr/local/bin/piportal \
+        /etc/profile.d/piportal-aliases.sh \
+        /etc/profile.d/piportal-update.sh \
         /etc/modules-load.d/piportal.conf \
         /etc/dnsmasq.d/piportal-usb.conf \
         /etc/piportal/piportal.conf
     do
         [ -e "$f" ] && { rm -f "$f"; log_ok "Entfernt: $f"; }
     done
+    rm -rf /usr/local/lib/piportal 2>/dev/null || true
     rmdir /etc/piportal 2>/dev/null || true
+    # Bei --purge auch den Share-Inhalt (mögliche Nutzerdaten!) entfernen.
+    if [ -d /srv/piportal ]; then
+        log_warn "Entferne /srv/piportal inkl. Share-Inhalt (--purge – Nutzerdaten werden gelöscht!)."
+        rm -rf /srv/piportal
+        log_ok "Entfernt: /srv/piportal"
+    fi
     systemctl daemon-reload
-    log_info "Portal-Image und Share unter /srv/piportal wurden NICHT gelöscht (Datenschutz)."
+    log_info "PiPortal-Dateien entfernt. WLAN-Zugang und SAE-Härtung bleiben erhalten."
+}
+
+# Stellt sicher, dass das Geraet nach dem Uninstall per WLAN/SSH erreichbar bleibt.
+ensure_remote_access() {
+    log_step "WLAN/SSH-Erreichbarkeit sicherstellen"
+    # SAE-Haertung nachziehen (falls doch entfernt) – Funktion aus lib/common.sh.
+    harden_wlan_sae
+    local wpa="/etc/wpa_supplicant/wpa_supplicant.conf"
+    if [ -f "$wpa" ] && grep -q 'network={' "$wpa" 2>/dev/null; then
+        log_ok "wpa_supplicant.conf enthält WLAN-Netzwerke – bleibt erhalten."
+    else
+        log_warn "wpa_supplicant.conf ohne Netzwerk – WLAN-Zugang bitte prüfen!"
+    fi
+    # Direkt versuchen (kein 'list-unit-files | grep -q'-Guard wegen des
+    # pipefail/SIGPIPE-Problems). Fehlt der Dienst, faengt '|| true' das ab.
+    local s
+    for s in dropbear ssh; do
+        systemctl enable --now "$s" >/dev/null 2>&1 && log_ok "SSH-Dienst aktiv: $s" || true
+    done
+    return 0
 }
 
 main() {
@@ -118,10 +174,16 @@ main() {
 
     stop_services
     restore_backup "$from"
+    remove_portal_image
     [ "$purge" = "1" ] && purge_files
+
+    # Der Uninstall darf das Geraet nicht aus dem WLAN werfen: SAE-Haertung
+    # nachziehen, WLAN-Netzwerke pruefen und den SSH-Dienst am Leben halten.
+    ensure_remote_access
 
     log_step "Fertig"
     log_warn "Für vollständige Rückkehr zum Ausgangszustand ggf. neu starten:  sudo reboot"
+    log_info "WLAN-Zugang und SAE-Härtung wurden bewusst erhalten – SSH bleibt erreichbar."
 }
 
 main "$@"

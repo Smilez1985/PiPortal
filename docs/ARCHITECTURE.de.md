@@ -42,8 +42,8 @@ Quellen:
 
 **Entscheidung: eine einzige USB-Config mit RNDIS (mit MS-OS-Descriptors) + Massenspeicher ausliefern. CDC-ECM/NCM existieren als optionale zweite Config für Linux/macOS, sind aber per Default deaktiviert (`ENABLE_ECM=0`, `ENABLE_NCM=0`).**
 
-Begründung (Ziel: „läuft an möglichst vielen *fremden* Windows-PCs OHNE Adminaufwand"):
-- **RNDIS + os_desc** (`compat-id RNDIS`, `sub 5162001`, Vendor-Code `0xcd`, `MSFT100`) ist das **einzige** USB-Ethernet-Protokoll mit No-Install-Inbox-Treiber über **Windows 7/8/10/11**. Es bindet auf einem jungfräulichen, fremden PC ohne Treiberinstallation und ohne Adminrechte.
+Begründung (Ziel: „läuft an möglichst vielen *fremden* Windows-PCs mit möglichst wenig Aufwand am Host"):
+- **RNDIS + os_desc** (`compat-id RNDIS`, `sub 5162001`, Vendor-Code `0xcd`, `MSFT100`) hat die **größte Reichweite** der USB-Ethernet-Protokolle. Auf Windows 7–10 — und vielen Windows-11-Installationen — lässt Windows über die MS-OS-Descriptors seinen Inbox-Treiber „Remote NDIS Compatible Device" ohne Download laden; in unserem Windows-11-Hardwaretest band es automatisch. **Einschränkung für aktuelles Windows 11:** Microsoft mustert RNDIS als unsicher aus, und der Inbox-Treiber installiert sich auf Windows 10/11 nicht mehr *zuverlässig* automatisch. Wo nicht, braucht der Adapter eine einmalige manuelle Treiberzuweisung im Geräte-Manager — und das erfordert **Adminrechte**. Genau diese Ausmusterung ist der Hauptgrund, warum NCM der dokumentierte Nachfolger ist.
 - **Mehrere USB-Configs haben Windows in der Praxis zerlegt.** Der ursprüngliche Plan war ein Zwei-Config-Gadget (Config 1 = RNDIS für Windows, Config 2 = CDC-ECM für Linux/macOS). An echter Hardware band Windows **gar keine** Funktionstreiber — weder die Netzwerkkarte noch das Laufwerk erschienen — weil Windows Multi-Config-Geräte schlecht unterstützt und dann nichts lädt. Der Auslieferungs-Default ist deshalb eine **einzige Config** (RNDIS + Massenspeicher). ECM/NCM bleiben im Skript als opt-in zweite Config für reinen Linux/macOS-Einsatz.
 - **NCM allein schließt Windows 10 aus** (kein Inbox-Treiber → manuelle Treiberwahl mit Adminrechten); selbst auf Win11 bindet es nur mit zusätzlichem `WINNCM`-os_desc automatisch. NCM bleibt daher per Default aus.
 - Die Raspberry-Pi-**Treiber-`.exe`** braucht Adminrechte + Installation auf dem Ziel-PC → widerspricht dem Ziel „spurlos an fremden PCs".
@@ -97,7 +97,7 @@ Quellen:
 
 Ein **configfs-Composite-Gadget**, aufgebaut per idempotentem systemd-oneshot, mit einer **einzigen USB-Config**:
 
-1. **RNDIS** (mit MS-OS-Descriptors, Product `0x1d6b:0xa4ac`) → das Windows-Gesicht, treiberlos auf fremden PCs.
+1. **RNDIS** (mit MS-OS-Descriptors, Product `0x1d6b:0xa4ac`) → das Windows-Gesicht; installiert sich auf Windows 7–10 und vielen Win11-PCs automatisch, wobei aktuelles Windows 11 eine einmalige Treiberzuweisung mit Adminrechten verlangen kann (RNDIS wird ausgemustert — siehe Einschränkung oben).
 2. **Massenspeicher** als **read-only-FAT16-Image** (`ro=1 removable=1`, 16 MB) → sichtbarer Wegweiser mit einer `.url` auf den SMB-Share.
 3. **CDC-ECM/NCM** → optionale zweite Config für Linux/macOS, **per Default aus** (Multi-Config zerlegt die Windows-Treiberbindung).
 

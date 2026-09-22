@@ -42,8 +42,8 @@ Sources:
 
 **Decision: ship a single USB configuration containing RNDIS (with MS-OS descriptors) + mass storage. CDC-ECM/NCM exist as an optional second config for Linux/macOS but are disabled by default (`ENABLE_ECM=0`, `ENABLE_NCM=0`).**
 
-Rationale (goal: "works on as many *foreign* Windows PCs as possible, with no admin effort"):
-- **RNDIS + os_desc** (`compat-id RNDIS`, `sub 5162001`, vendor code `0xcd`, `MSFT100`) is the **only** USB-Ethernet protocol with a no-install inbox driver across **Windows 7/8/10/11**. It binds on a fresh, unknown PC with no driver install and no admin rights.
+Rationale (goal: "works on as many *foreign* Windows PCs as possible, with the least host-side effort"):
+- **RNDIS + os_desc** (`compat-id RNDIS`, `sub 5162001`, vendor code `0xcd`, `MSFT100`) has the **broadest reach** of the USB-Ethernet protocols. On Windows 7–10 — and many Windows 11 installs — the MS-OS descriptors make Windows load its inbox "Remote NDIS Compatible Device" driver with no download; it bound automatically in our Windows 11 hardware test. **Caveat for current Windows 11:** Microsoft is phasing RNDIS out as insecure, and the inbox driver no longer *reliably* auto-installs on Windows 10/11. Where it doesn't, the adapter needs a one-time manual driver assignment in Device Manager — which requires **admin rights**. That deprecation is the main reason NCM is the documented successor.
 - **Multiple USB configurations broke Windows in practice.** The original plan was a two-config gadget (config 1 = RNDIS for Windows, config 2 = CDC-ECM for Linux/macOS). On real hardware Windows bound **no** function drivers at all — neither the network adapter nor the drive appeared — because Windows has poor support for multi-config devices and then loads nothing. The shipping default is therefore a **single config** (RNDIS + mass storage). ECM/NCM remain in the script as an opt-in second config for Linux/macOS-only use.
 - **NCM alone excludes Windows 10** (no inbox driver → manual driver selection requiring admin); even on Win11 it only auto-binds with an extra `WINNCM` os_desc. So NCM stays off by default.
 - The Raspberry Pi **driver `.exe`** requires admin rights + installation on the target PC → contradicts the "leave no trace on foreign PCs" goal.
@@ -97,7 +97,7 @@ Sources:
 
 A **configfs composite gadget** built by an idempotent systemd oneshot, exposing a **single USB configuration**:
 
-1. **RNDIS** (with MS-OS descriptors, product `0x1d6b:0xa4ac`) → the Windows face, driverless on foreign PCs.
+1. **RNDIS** (with MS-OS descriptors, product `0x1d6b:0xa4ac`) → the Windows face; auto-installs on Windows 7–10 and many Win11 PCs, though current Windows 11 may require a one-time admin driver step (RNDIS is being deprecated — see the caveat above).
 2. **Mass storage** as a **read-only FAT16 image** (`ro=1 removable=1`, 16 MB) → a visible signpost with a `.url` pointing to the SMB share.
 3. **CDC-ECM/NCM** → an optional second config for Linux/macOS, **off by default** (multi-config breaks Windows driver binding).
 
