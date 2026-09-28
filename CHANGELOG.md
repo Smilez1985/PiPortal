@@ -4,7 +4,7 @@
 
 All notable changes to PiPortal. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning per [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.3.0] — 2026-09-29 00:45 CEST
 
 ### Added
 - **`piportal --version` (alias `-V`)** – prints the installed version. The single source of
