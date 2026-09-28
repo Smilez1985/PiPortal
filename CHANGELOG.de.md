@@ -4,6 +4,53 @@
 
 Alle nennenswerten Änderungen an PiPortal. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [1.4.0] — 2026-09-29 01:40 CEST
+
+### Behoben
+- **`write_file_if_changed()` konnte die Zieldatei stillschweigend leeren.** Die Funktion schrieb
+  über `mktemp`, ungeprüft. Zeigt `TMPDIR` auf ein nicht existierendes Verzeichnis – oder ist die
+  RAM-Disk voll –, liefert `mktemp` einen leeren Pfad, `cat > ""` schlägt fehl, und `install`
+  bekommt anschließend eine leere Quelle: die Zieldatei ist danach leer. Zu den so geschriebenen
+  Dateien gehören `/etc/wpa_supplicant/wpa_supplicant.conf` und **`/boot/firmware/cmdline.txt`** –
+  dort bedeutet eine leere Datei, dass der Pi nicht mehr bootet.
+
+  Die Funktion schreibt jetzt eine Sidecar-Datei **neben das Ziel** und benennt sie per `mv` um –
+  dasselbe Muster, das die SAE-Härtung für `cmdline.txt` bereits nutzte. Kein `/tmp` beteiligt,
+  kein zusätzlicher Schreibzyklus, und `mv` innerhalb einer Partition ist atomar: Ein Stromausfall
+  mittendrin lässt entweder die alte oder die neue Fassung zurück, nie eine abgeschnittene.
+
+  Ein leerer Inhalt ersetzt eine nicht-leere Datei nicht mehr (fast immer ein Fehler in der
+  aufrufenden Pipeline). Wer es beabsichtigt, übergibt `--allow-empty`. Besitzer und Gruppe einer
+  vorhandenen Zieldatei bleiben erhalten.
+
+- **Modul 30 prüft `cmdline.txt` jetzt vor dem Schreiben.** Beim Entfernen der Legacy-`g_multi`-
+  Tokens wurde das Ergebnis ungeprüft geschrieben. Hätte die Umformung eine leere Zeile ergeben
+  oder `root=` verloren, wäre das Gerät nicht mehr gebootet. Das Modul verifiziert die Zeile jetzt
+  und legt vorher ein Backup an – dieselbe Absicherung, die Modul 20 für `wpa_supplicant.conf`
+  schon hat.
+
+### Geändert
+- **`piportal --update` aktualisiert jetzt PiPortal selbst, nicht das Betriebssystem.**
+  Der Befehl holt das Repo und lässt den idempotenten Installer darüber laufen. Die
+  komplette Wartung — System-Pakete, WLAN-Härtung, PiPortal, optionale Software —
+  liegt jetzt auf dem neuen **`piportal --update-all`** (`-U`). Beide fahren dieselbe
+  modulare Routine in `tools/update/`; `--update` wählt daraus nur das Modul
+  `piportal`. Wer eine neue PiPortal-Version will, soll nicht zwangsweise
+  `apt upgrade` mitnehmen müssen.
+
+### Hinzugefügt
+- **Update-Kanäle über `UPDATE_CHANNEL`** in der `piportal.conf`:
+  `release` (Default) zieht das höchste veröffentlichte Tag `vX.Y.Z` — Geräte im Feld
+  bekommen nur bewusst freigegebene Stände. `main` folgt dem Entwicklungszweig. Die
+  Tag-Auswahl sortiert nach Version, `v1.10.0` gewinnt also korrekt gegen `v1.2.0`.
+  Der Rückweg von einem Tag auf `main` ist abgedeckt; ein verändertes
+  Arbeitsverzeichnis bricht das Update ab, statt überschrieben zu werden.
+- **`tests/`** – Shell-Testsuiten für `write_file_if_changed` (14 Fälle, inklusive der
+  Regression mit kaputtem `TMPDIR`), das Versionsstempel-Modul und die Kanal-Logik
+  (10 Fälle gegen ein echtes Git-Repo).
+
+---
+
 ## [1.3.0] — 2026-09-29 00:45 CEST
 
 ### Hinzugefügt

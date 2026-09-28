@@ -20,7 +20,8 @@ Wiederfinden nach Monaten sofort zur Hand hat.
 | `piportal --wifi-switch` | `-w` | WLAN-Profil wechseln (Menü). |
 | `piportal --wifi-switch next` | | Zum nächsten konfigurierten WLAN rotieren. |
 | `piportal --wifi-switch <id>` | | Gezielt zu WLAN-ID wechseln. |
-| `piportal --update` | `-u` | `dietpi-update` + `apt upgrade` + Reboot (`-y` ohne Rückfrage). |
+| `piportal --update` | `-u` | **Nur PiPortal selbst** aktualisieren: Repo holen, dann den idempotenten Installer drüber. Kanal über `UPDATE_CHANNEL` — `release` (Default, höchstes `vX.Y.Z`-Tag) oder `main`. |
+| `piportal --update-all` | `-U` | **Komplette Wartung**: System-Pakete, WLAN-Härtung, PiPortal, optionale Software. Fährt die gesamte modulare Update-Routine. |
 | `piportal --poweroff` | `off` | Sauber herunterfahren (danach gefahrlos abziehen). |
 | `piportal --smb-passwd` | | Netzlaufwerk-Passwort **einrichten** (noch keins gesetzt) **bzw. zurücksetzen** (schon gesetzt → löscht Share-Inhalt). Erkennt den Zustand selbst. `--smb-reset` ist ein Alias. |
 | `piportal --publish` | | Wegweiser-Laufwerk neu bauen + am Host neu einlegen (ohne Abziehen). Nach Änderungen unter `/srv/piportal/signpost/`. |

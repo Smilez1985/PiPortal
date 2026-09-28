@@ -4,7 +4,8 @@
 #  Befehle:
 #     piportal --status        Kompakter Statusüberblick (IP, Uptime, CPU, RAM …)
 #     piportal --wifi-switch    WLAN wechseln (Menü) oder: --wifi-switch next
-#     piportal --update         System aktualisieren + Reboot
+#     piportal --update         PiPortal aktualisieren (Release oder main)
+#     piportal --update-all     Komplette Wartung inkl. Betriebssystem
 #     piportal --version        Installierte Version anzeigen
 #     piportal --help           Diese Hilfe
 #  Gedacht auch für die Steuerung vom Host-PC über die USB-Verbindung
@@ -155,23 +156,64 @@ cmd_wifi_switch() {
 # ==============================================================================
 #  --update
 # ==============================================================================
-cmd_update() {
-    local yes="${1:-}"
-    echo "${YL}${B}PiPortal-Update${R}"
-    echo "  Führt aus: dietpi-update  ->  apt update && upgrade  ->  Reboot"
-    if [ "$yes" != "-y" ] && [ "$yes" != "--yes" ]; then
-        local a; read -r -p "Fortfahren und danach neu starten? [j/N] " a
-        case "$a" in [jJyY]|[jJ][aA]) ;; *) echo "Abgebrochen."; return 0;; esac
+# ==============================================================================
+#  --update       nur PiPortal selbst (Repo -> idempotenter Installer)
+#  --update-all   die komplette Update-Routine (System, WLAN-Haertung,
+#                 PiPortal, optionale Software)
+#
+#  Beides laeuft ueber denselben modularen Orchestrator in
+#  tools/update/. --update waehlt daraus nur das Modul "piportal" aus.
+# ==============================================================================
+
+# _find_repo – PiPortal-Repo mit install.sh an den ueblichen Orten suchen.
+_find_repo() {
+    local c
+    for c in "${PIPORTAL_REPO:-}" /home/*/PiPortal /root/PiPortal /opt/PiPortal; do
+        [ -n "$c" ] && [ -f "$c/install.sh" ] && { printf '%s' "$c"; return 0; }
+    done
+    return 1
+}
+
+# _run_update <modulliste|""> <ueberschrift>
+_run_update() {
+    local modules="$1" title="$2" repo orch
+    if ! repo="$(_find_repo)"; then
+        echo "${RD}Kein PiPortal-Repo mit install.sh gefunden.${R}"
+        echo "  Erwartet unter ~/PiPortal, /root/PiPortal oder /opt/PiPortal."
+        echo "  Abweichender Ort:  PIPORTAL_REPO=/pfad piportal --update"
+        return 1
     fi
-    echo "${CY}» DietPi-Update…${R}"
-    if [ -x /boot/dietpi/dietpi-update ]; then _sudo /boot/dietpi/dietpi-update 1; else echo "  (dietpi-update nicht gefunden, übersprungen)"; fi
-    echo "${CY}» apt update/upgrade…${R}"
-    _sudo apt-get update
-    DEBIAN_FRONTEND=noninteractive _sudo apt-get -y -o Dpkg::Options::=--force-confold upgrade
-    _sudo apt-get -y autoremove --purge
-    sync
-    echo "${GN}Fertig – starte neu…${R}"
-    _sudo systemd-run --no-block reboot 2>/dev/null || _sudo reboot
+    orch="${repo}/tools/update/update_orchestrator.sh"
+    if [ ! -f "$orch" ]; then
+        echo "${RD}Update-Orchestrator fehlt:${R} $orch"
+        return 1
+    fi
+
+    echo "${YL}${B}${title}${R}"
+    echo "  Repo: ${repo}"
+    if [ -n "$modules" ]; then
+        MODULES="$modules" _sudo bash "$orch"
+    else
+        _sudo bash "$orch"
+    fi
+}
+
+cmd_update() {
+    local channel="${UPDATE_CHANNEL:-release}"
+    echo "${DIM}Kanal: ${channel} – $(
+        case "$channel" in
+            main) printf 'Spitze des Entwicklungszweigs' ;;
+            *)    printf 'neuestes veroeffentlichtes Release (vX.Y.Z)' ;;
+        esac
+    )${R}"
+    echo "${DIM}Komplette Wartung inkl. Betriebssystem:  piportal --update-all${R}"
+    _run_update "piportal" "PiPortal aktualisieren"
+}
+
+cmd_update_all() {
+    echo "${DIM}Module: System-Pakete, WLAN-Haertung, PiPortal, optionale Software.${R}"
+    echo "${DIM}Nur PiPortal selbst:  piportal --update${R}"
+    _run_update "" "Vollstaendige Wartung"
 }
 
 # ==============================================================================
@@ -430,7 +472,9 @@ ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
   ${CY}piportal --wifi-switch${R}    WLAN-Profil wechseln (Menü)
   ${CY}piportal --wifi-switch next${R}  Zum nächsten konfigurierten WLAN rotieren
   ${CY}piportal --wifi-switch <id>${R}  Gezielt zu WLAN-ID wechseln
-  ${CY}piportal --update${R}         dietpi-update + apt upgrade + Reboot (mit -y ohne Rückfrage)
+  ${CY}piportal --update${R}         PiPortal aktualisieren: Repo holen + idempotenter Installer
+                          ${DIM}Kanal über UPDATE_CHANNEL in der Config: release (Default) | main${R}
+  ${CY}piportal --update-all${R}     Komplette Wartung: System-Pakete, WLAN-Härtung, PiPortal, Extras
   ${CY}piportal --poweroff${R}       Sauber herunterfahren (danach gefahrlos abziehen)
   ${CY}piportal --smb-passwd${R}     Netzlaufwerk-Passwort einrichten – erkennt selbst:
                           ${DIM}noch keins gesetzt → setzen (keine Daten weg);
@@ -450,7 +494,8 @@ EOF
 case "${1:-}" in
     --status|status|-s)        cmd_status ;;
     --wifi-switch|wifi-switch|-w) shift 2>/dev/null; cmd_wifi_switch "${1:-}" ;;
-    --update|update|-u)        shift 2>/dev/null; cmd_update "${1:-}" ;;
+    --update|update|-u)        cmd_update ;;
+    --update-all|update-all|-U) cmd_update_all ;;
     --poweroff|poweroff|off)   cmd_poweroff ;;
     # Ein Werkzeug für beide Fälle; --smb-reset bleibt als Alias erhalten.
     --smb-passwd|smb-passwd|--smb-reset|smb-reset|--smb|smb) cmd_smb_passwd ;;

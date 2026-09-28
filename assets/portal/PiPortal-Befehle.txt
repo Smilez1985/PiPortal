@@ -14,7 +14,8 @@ Dann auf dem PiPortal / then on the PiPortal:  piportal <befehl>
                                  overview: IPs, CPU temp, RAM, services
   piportal --wifi-switch         WLAN-Profil wechseln (Menue) / switch Wi-Fi
   piportal --wifi-switch next    zum naechsten WLAN / next Wi-Fi
-  piportal --update              System aktualisieren + Reboot / update + reboot
+  piportal --update              PiPortal aktualisieren / update PiPortal itself
+  piportal --update-all          alles: System + PiPortal / everything: OS + PiPortal
   piportal --poweroff            sauber ausschalten / clean shutdown
   piportal --smb-passwd          Netzlaufwerk-Passwort setzen bzw. zuruecksetzen
                                  set or reset the network-drive password

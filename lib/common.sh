@@ -181,25 +181,64 @@ install_file() {
     fi
 }
 
-# write_file_if_changed <ziel> <modus> – liest Inhalt von stdin, schreibt nur bei Änderung.
+# write_file_if_changed <ziel> <modus> [--allow-empty]
+#   Liest den Inhalt von stdin und schreibt nur, wenn er sich unterscheidet.
+#
+# Schreibt ueber eine Sidecar-Datei NEBEN dem Ziel und benennt sie atomar um –
+# dasselbe Muster, das die SAE-Haertung fuer cmdline.txt schon nutzt. Gruende:
+#
+#   * Kein /tmp noetig. `mktemp` liefert einen leeren Pfad, wenn TMPDIR auf ein
+#     nicht existierendes Verzeichnis zeigt oder die RAM-Disk voll ist. Ohne
+#     Pruefung lief `cat > ""` ins Leere und `install` bekam eine leere Quelle –
+#     die Zieldatei war danach leer. Bei /boot/firmware/cmdline.txt bedeutet
+#     das ein Geraet, das nicht mehr bootet.
+#   * `mv` auf derselben Partition ist atomar: Es gibt keinen Moment, in dem
+#     die Zieldatei halb geschrieben ist. Ein Stromausfall mittendrin laesst
+#     entweder die alte oder die neue Fassung zurueck, nie eine kaputte.
+#   * Kein zusaetzlicher Schreibzyklus ueber /tmp -> SD. Die Sidecar-Datei
+#     liegt ohnehin auf derselben Partition wie das Ziel.
+#
+# Leerer Inhalt ersetzt eine nicht-leere Datei NICHT – das ist fast immer ein
+# Fehler in der aufrufenden Pipeline. Wer bewusst leeren will, uebergibt
+# --allow-empty.
 write_file_if_changed() {
-    local dst="$1" mode="${2:-0644}" tmp
-    # mktemp kann fehlschlagen, wenn TMPDIR auf ein nicht existierendes
-    # Verzeichnis zeigt. Ohne Pruefung liefe `cat > ""` ins Leere und die
-    # Zieldatei wuerde mit leerem Inhalt ueberschrieben.
-    tmp="$(mktemp 2>/dev/null)" || tmp="$(mktemp /tmp/piportal.XXXXXX)" \
-        || die "Konnte keine temporaere Datei anlegen (TMPDIR=${TMPDIR:-unset})"
-    [ -n "$tmp" ] || die "mktemp lieferte einen leeren Pfad"
-    cat > "$tmp"
+    local dst="$1" mode="${2:-0644}" allow_empty=0 tmp rc
+    [ "${3:-}" = "--allow-empty" ] && allow_empty=1
+
+    [ -n "$dst" ] || die "write_file_if_changed: kein Zielpfad angegeben"
     ensure_dir "$(dirname "$dst")"
+
+    tmp="${dst}.piportal-tmp.$$"
+    # Fehlschlaegt hier etwas, bleibt das Ziel unangetastet.
+    if ! cat > "$tmp"; then
+        rc=$?
+        rm -f "$tmp"
+        die "Konnte nicht nach ${tmp} schreiben (Exit ${rc}) – Ziel unveraendert: $dst"
+    fi
+
+    if [ ! -s "$tmp" ] && [ "$allow_empty" -eq 0 ]; then
+        rm -f "$tmp"
+        if [ -s "$dst" ]; then
+            die "Leerer Inhalt fuer ${dst} – vorhandene Datei bleibt unveraendert. (Beabsichtigt? Dann --allow-empty uebergeben.)"
+        fi
+        log_warn "Leerer Inhalt fuer ${dst} – nichts geschrieben."
+        return 0
+    fi
+
     if [ -f "$dst" ] && cmp -s "$tmp" "$dst"; then
         log_skip "Unverändert: $dst"
         rm -f "$tmp"
-    else
-        install -m "$mode" "$tmp" "$dst"
-        rm -f "$tmp"
-        log_ok "Geschrieben: $dst"
+        return 0
     fi
+
+    chmod "$mode" "$tmp"
+    # Besitzer/Gruppe des Ziels uebernehmen, falls vorhanden (mv erhaelt sie
+    # sonst von der Sidecar-Datei, die root gehoert).
+    if [ -e "$dst" ]; then
+        chown --reference="$dst" "$tmp" 2>/dev/null || true
+    fi
+    mv -f "$tmp" "$dst" || { rm -f "$tmp"; die "Konnte ${dst} nicht ersetzen"; }
+    log_ok "Geschrieben: $dst"
 }
 
 # enable_service <unit> – aktiviert + startet nur, wenn nötig.

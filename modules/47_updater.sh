@@ -34,5 +34,5 @@ module_47_updater() {
 
     log_ok "Update-Routine installiert: ${dst}"
     log_info "Wartung läuft NICHT automatisch beim Boot – es wird beim Login gefragt"
-    log_info "(fällig alle ${UPDATE_INTERVAL_DAYS:-14} Tage). Manuell:  sudo ${dst}/update_orchestrator.sh"
+    log_info "(fällig alle ${UPDATE_INTERVAL_DAYS:-14} Tage). Manuell:  piportal --update-all"
 }

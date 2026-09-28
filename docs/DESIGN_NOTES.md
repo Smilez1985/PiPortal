@@ -116,3 +116,74 @@ Pulling an older source over a newer installation is almost always a mistake.
 
 **Tags are immutable.** A published tag is never moved. Mistakes in a release
 are fixed by a new patch release.
+
+### Writing system files safely
+
+`write_file_if_changed()` in `lib/common.sh` is the only path through which the
+installer creates configuration files. It writes a sidecar file **next to the
+target** (`<target>.piportal-tmp.$$`) and renames it with `mv`.
+
+Going through `/tmp` was deliberately abandoned: `mktemp` returns an empty path
+when `TMPDIR` points at a non-existent directory, or when the RAM disk is full.
+Left unchecked, that *emptied* the target file — for
+`/boot/firmware/cmdline.txt` that means a device that no longer boots.
+
+The sidecar approach is better in every respect:
+
+- **Atomic.** `mv` within one partition is a single operation. There is no
+  moment where the target is half-written; a power loss leaves either the old
+  or the new version behind.
+- **No extra write cycle.** The sidecar lives on the same partition as the
+  target anyway — unlike the `/tmp` detour, which would have touched the RAM
+  disk and the SD card in sequence.
+- **Environment-independent.** No `TMPDIR`, no systemd `PrivateTmp=`, no full
+  RAM disk can corrupt the write.
+
+Plus two safety rules:
+
+1. **Empty does not replace.** An empty payload never overwrites a non-empty
+   file — that is almost always a broken pipeline upstream, not intent. Callers
+   that mean it pass `--allow-empty`.
+2. **Boot-critical files get an extra check.** `cmdline.txt` (must contain
+   `root=` and stay on one line) and `wpa_supplicant.conf` (must contain at
+   least one `network={`) are verified after transformation; if the check fails
+   the old version stays in place or is restored from backup.
+
+This applies to **configuration files**. Running logs are unaffected:
+`/var/log` lives on tmpfs via DietPi RAMlog and is flushed to the card in
+batches — that is exactly where buffering in RAM is right, because it concerns
+many small, expendable writes rather than single critical ones.
+
+### Update channels: release or main
+
+The update routine in `tools/update/` is modular — the orchestrator runs
+`system`, `harden_wlan`, `piportal` and `claude` in order and keeps going if one
+fails. Both CLI commands drive that same routine; they differ only in which
+modules they select:
+
+| Command | Modules | Purpose |
+|---------|---------|---------|
+| `piportal --update` | `piportal` | PiPortal itself — the common case. |
+| `piportal --update-all` | all | Full maintenance, operating system included. |
+
+That split is deliberate: wanting a new PiPortal version should not force
+`dietpi-update` and `apt upgrade` along with it. And full maintenance gets its
+own command rather than a flag.
+
+**Where the self-update pulls from** is controlled by `UPDATE_CHANNEL`:
+
+- **`release`** (default) – the highest published `vX.Y.Z` tag. The repo ends up
+  on a tag (detached HEAD), which is exactly right for a device in the field: it
+  only ever receives states that were deliberately published. Tag selection
+  sorts by version, not alphabetically — `v1.10.0` is newer than `v1.2.0`.
+- **`main`** – the tip of the development branch (`git pull --ff-only`). For
+  devices used for development. If the repo currently sits on a tag, the module
+  switches back to `main` first.
+
+Before any switch the module checks that the working tree is clean. Local
+changes abort the update instead of being overwritten or making the checkout
+fail.
+
+If the release channel finds no tags at all, the module says so and does
+nothing — rather than silently falling back to `main`.
+

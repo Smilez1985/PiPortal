@@ -4,6 +4,50 @@
 
 All notable changes to PiPortal. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning per [SemVer](https://semver.org/).
 
+## [1.4.0] — 2026-09-29 01:40 CEST
+
+### Fixed
+- **`write_file_if_changed()` could silently empty its target file.** The function wrote through
+  `mktemp`, unchecked. If `TMPDIR` points at a non-existent directory — or the RAM disk is full —
+  `mktemp` returns an empty path, `cat > ""` fails, and `install` is then handed an empty source:
+  the target ends up blank. Among the files written this way are
+  `/etc/wpa_supplicant/wpa_supplicant.conf` and **`/boot/firmware/cmdline.txt`**, where an empty
+  file means the Pi no longer boots.
+
+  The function now writes a sidecar file **next to the target** and renames it with `mv` — the
+  same pattern the SAE hardening already used for `cmdline.txt`. No `/tmp` involved, no extra
+  write cycle, and `mv` within one partition is atomic: a power loss mid-write leaves either the
+  old or the new version behind, never a truncated one.
+
+  An empty payload no longer replaces a non-empty file (almost always a broken pipeline upstream).
+  Callers that mean it pass `--allow-empty`. Ownership of an existing target is preserved.
+
+- **Module 30 now sanity-checks `cmdline.txt` before writing.** Removing the legacy `g_multi`
+  tokens wrote the result unconditionally. If the transformation had produced an empty line or
+  dropped `root=`, the device would not have booted. The module now verifies the line and takes a
+  backup first — the same guard module 20 already applies to `wpa_supplicant.conf`.
+
+### Changed
+- **`piportal --update` now updates PiPortal itself, not the operating system.**
+  It fetches the repo and runs the idempotent installer over it. Full maintenance —
+  system packages, Wi-Fi hardening, PiPortal, optional software — moved to the new
+  **`piportal --update-all`** (`-U`). Both drive the same modular routine in
+  `tools/update/`; `--update` just selects the `piportal` module. Wanting a new
+  PiPortal version should not force `apt upgrade` along with it.
+
+### Added
+- **Update channels via `UPDATE_CHANNEL`** in `piportal.conf`:
+  `release` (default) pulls the highest published `vX.Y.Z` tag — devices in the
+  field only receive states that were deliberately published. `main` follows the
+  development branch. Tag selection sorts by version, so `v1.10.0` correctly beats
+  `v1.2.0`. Switching back from a tag to `main` is handled; a dirty working tree
+  aborts the update instead of being overwritten.
+- **`tests/`** – shell test suites for `write_file_if_changed` (14 cases, including
+  the broken-`TMPDIR` regression), the version stamp module and the channel logic
+  (10 cases against a real git repo).
+
+---
+
 ## [1.3.0] — 2026-09-29 00:45 CEST
 
 ### Added

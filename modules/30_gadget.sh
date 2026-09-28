@@ -30,9 +30,20 @@ module_30_gadget() {
         # Alle g_multi-Tokens und ein evtl. mitgeführtes modules-load=dwc2,g_multi entfernen.
         line="$(printf '%s' "$line" \
             | sed -E 's/ *modules-load=dwc2,g_multi//g; s/ *g_multi\.[^ ]*//g')"
-        # dwc2 wird jetzt über /etc/modules-load.d geladen – kein modules-load nötig.
-        printf '%s\n' "$line" | write_file_if_changed "$cmd" 0755
-        log_ok "Legacy-g_multi aus cmdline.txt entfernt (Umstellung auf configfs)."
+
+        # Sanity vor dem Schreiben: cmdline.txt ist die Datei, ohne die der Pi
+        # nicht mehr bootet. Fehlt root= oder ist die Zeile leer, wird NICHT
+        # geschrieben. Gleiche Absicherung wie bei der SAE-Haertung in
+        # lib/common.sh und bei wpa_supplicant.conf in Modul 20.
+        if [ -z "$line" ] || ! printf '%s' "$line" | grep -q 'root='; then
+            log_err "cmdline-Sanity fehlgeschlagen (kein root= oder leer) – cmdline.txt bleibt unveraendert."
+            log_warn "Legacy-g_multi wurde NICHT entfernt. Bitte /boot/firmware/cmdline.txt von Hand pruefen."
+        else
+            backup_now "$cmd" >/dev/null
+            # dwc2 wird jetzt über /etc/modules-load.d geladen – kein modules-load nötig.
+            printf '%s\n' "$line" | write_file_if_changed "$cmd" 0755
+            log_ok "Legacy-g_multi aus cmdline.txt entfernt (Umstellung auf configfs)."
+        fi
     else
         log_skip "cmdline.txt enthält kein g_multi mehr."
     fi

@@ -118,3 +118,76 @@ Installation zu ziehen ist fast immer ein Versehen.
 
 **Tags sind unveränderlich.** Ein veröffentlichtes Tag wird nie verschoben.
 Fehler in einem Release werden durch ein neues Patch-Release behoben.
+
+### Sicheres Schreiben von Systemdateien
+
+`write_file_if_changed()` in `lib/common.sh` ist der einzige Weg, auf dem der
+Installer Konfigurationsdateien erzeugt. Sie schreibt eine Sidecar-Datei
+**neben das Ziel** (`<ziel>.piportal-tmp.$$`) und benennt sie per `mv` um.
+
+Der Umweg über `/tmp` wurde bewusst aufgegeben: `mktemp` liefert einen leeren
+Pfad, wenn `TMPDIR` auf ein nicht existierendes Verzeichnis zeigt oder die
+RAM-Disk voll läuft. Ungeprüft führte das dazu, dass die Zieldatei *geleert*
+wurde — bei `/boot/firmware/cmdline.txt` ein Gerät, das nicht mehr bootet.
+
+Die Sidecar-Variante ist in jeder Hinsicht besser:
+
+- **Atomar.** `mv` innerhalb einer Partition ist eine einzige Operation. Es
+  gibt keinen Moment, in dem die Zieldatei halb geschrieben ist; ein
+  Stromausfall lässt entweder die alte oder die neue Fassung zurück.
+- **Kein zusätzlicher Schreibzyklus.** Die Sidecar-Datei liegt ohnehin auf
+  derselben Partition wie das Ziel — anders als beim Umweg über `/tmp`, der
+  RAM-Disk und SD-Karte nacheinander berührt hätte.
+- **Unabhängig von der Umgebung.** Kein `TMPDIR`, kein `PrivateTmp=` einer
+  systemd-Unit, keine volle RAM-Disk kann das Schreiben verfälschen.
+
+Dazu zwei Schutzregeln:
+
+1. **Leer ersetzt nicht.** Ein leerer Inhalt überschreibt keine nicht-leere
+   Datei — das ist fast immer ein Fehler in der aufrufenden Pipeline, nicht
+   Absicht. Wer es beabsichtigt, übergibt `--allow-empty`.
+2. **Bootkritische Dateien werden zusätzlich geprüft.** `cmdline.txt` (muss
+   `root=` enthalten und einzeilig bleiben) und `wpa_supplicant.conf` (muss
+   mindestens ein `network={` enthalten) werden nach der Umformung verifiziert;
+   schlägt die Prüfung fehl, bleibt die alte Fassung stehen bzw. wird aus dem
+   Backup zurückgespielt.
+
+Das gilt für **Konfigurationsdateien**. Laufende Logs sind davon nicht berührt:
+`/var/log` liegt über DietPi-RAMlog im tmpfs und wird gebündelt auf die Karte
+geschrieben — genau dort ist das Sammeln im RAM richtig, weil es um viele
+kleine, verschmerzbare Schreibvorgänge geht statt um einzelne, kritische.
+
+### Update-Kanäle: Release oder main
+
+Die Update-Routine in `tools/update/` ist modular — der Orchestrator ruft
+`system`, `harden_wlan`, `piportal` und `claude` der Reihe nach auf und läuft
+weiter, wenn eines scheitert. Genau dieselbe Routine bedient beide CLI-Befehle;
+sie unterscheiden sich nur in der Modulauswahl:
+
+| Befehl | Module | Zweck |
+|--------|--------|-------|
+| `piportal --update` | `piportal` | Nur PiPortal selbst — der häufige Fall. |
+| `piportal --update-all` | alle | Komplette Wartung, inklusive Betriebssystem. |
+
+Das ist Absicht: Wer eine neue PiPortal-Version einspielen will, soll nicht
+zwangsweise `dietpi-update` und `apt upgrade` mitnehmen müssen. Und wer
+Vollwartung will, bekommt sie mit einem eigenen Befehl statt mit einem Schalter.
+
+**Woher das Selbstupdate zieht,** steuert `UPDATE_CHANNEL` in der Config:
+
+- **`release`** (Default) – das höchste veröffentlichte Tag `vX.Y.Z`. Das Repo
+  steht danach auf einem Tag (abgelöster HEAD), was für ein Gerät im Feld genau
+  richtig ist: Es bekommt nur Stände, die bewusst freigegeben wurden. Die
+  Tag-Auswahl sortiert nach Version, nicht alphabetisch — `v1.10.0` ist neuer
+  als `v1.2.0`.
+- **`main`** – die Spitze des Entwicklungszweigs (`git pull --ff-only`). Für
+  Geräte, auf denen entwickelt wird. Steht das Repo gerade auf einem Tag,
+  wechselt das Modul zuerst zurück auf `main`.
+
+Vor jedem Wechsel prüft das Modul, ob das Arbeitsverzeichnis sauber ist. Lokale
+Änderungen brechen das Update ab, statt sie zu überschreiben oder den Wechsel
+scheitern zu lassen.
+
+Gibt es im Release-Kanal noch gar keine Tags, meldet das Modul das und tut
+nichts — statt kommentarlos auf `main` auszuweichen.
+

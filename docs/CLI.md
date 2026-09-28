@@ -20,7 +20,8 @@ again after months.
 | `piportal --wifi-switch` | `-w` | Switch Wi-Fi profile (menu). |
 | `piportal --wifi-switch next` | | Rotate to the next configured Wi-Fi. |
 | `piportal --wifi-switch <id>` | | Switch directly to a Wi-Fi ID. |
-| `piportal --update` | `-u` | `dietpi-update` + `apt upgrade` + reboot (`-y` to skip the prompt). |
+| `piportal --update` | `-u` | Update **PiPortal itself**: fetch the repo, then run the idempotent installer. Channel via `UPDATE_CHANNEL` — `release` (default, newest `vX.Y.Z` tag) or `main`. |
+| `piportal --update-all` | `-U` | **Full maintenance**: system packages, Wi-Fi hardening, PiPortal, optional software. Runs the whole modular update routine. |
 | `piportal --poweroff` | `off` | Shut down cleanly (then safe to unplug). |
 | `piportal --smb-passwd` | | **Set** the network-drive password (none set yet) **or reset** it (already set → wipes the share). Detects the state itself. `--smb-reset` is an alias. |
 | `piportal --publish` | | Rebuild the signpost drive + re-insert it at the host (without unplugging). After changes under `/srv/piportal/signpost/`. |
