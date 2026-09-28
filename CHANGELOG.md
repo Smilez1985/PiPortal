@@ -4,6 +4,29 @@
 
 All notable changes to PiPortal. Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versioning per [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **`piportal --version` (alias `-V`)** – prints the installed version. The single source of
+  truth is the `VERSION` file in the repo root; module 48 stamps it into
+  `/etc/piportal/version` at install time, so the CLI can answer without the repo being present.
+  If the file is missing (installation predates 1.3.0 or was copied by hand), the command says so
+  and names the fix.
+- **Module 48 – version stamp**, idempotent like every other phase:
+  file missing → create · same version → leave untouched · different version → update.
+  On an upgrade it calls `migrate_from()`, the designated place for changes that affect existing
+  installations. A version bump must never break a running PiPortal — the installer handles the
+  transition, not a release note telling people to reinstall.
+  A downgrade is refused in `--non-interactive` mode and asks for confirmation otherwise.
+
+### Fixed
+- **`write_file_if_changed()` could silently truncate its target.** `mktemp` was called without
+  checking its result. With `TMPDIR` pointing at a non-existent directory it returns an empty
+  path, `cat > ""` fails, and `install` was then handed an empty source — the target file ended
+  up blank. Now the call falls back to an explicit template and aborts if both attempts fail.
+
+---
+
 ## [1.2.0] — 2026-09-22 15:35 CEST
 
 ### Added

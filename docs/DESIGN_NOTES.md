@@ -85,3 +85,34 @@ The finished device was verified live on a Windows 11 PC: plugging the stick in 
 - **Single config** trades the tidy Linux/macOS ECM face for rock-solid Windows binding. ECM is one config flag away when a host needs it.
 - **Read-only signpost** means the stick itself never carries user data by design — everything real goes over SMB. That is the whole point of removing the corruption risk, not a limitation to work around.
 - **512 MB RAM** is mitigated, not erased, by zram plus a size-staggered SD swapfile; heavy tools run, but this is a Zero 2 W, not a workstation.
+
+---
+
+## 6. Versioning and releases
+
+**The `VERSION` file in the repo root is the single source of truth.**
+Module 48 stamps it into `/etc/piportal/version` at install time so that
+`piportal --version` can answer even on a device without the repo.
+
+**A version bump never breaks a running installation.**
+This deliberately departs from the usual reading of SemVer, where a major bump
+is expected to break something. For an idempotent installer that would be a
+contradiction: if `install.sh` brings an existing installation to the target
+state anyway, handling the transition between two versions is its job — not
+the user's.
+
+In practice: whatever changes in a new release and affects existing
+installations belongs in `migrate_from()` in module 48. Each block checks with
+`ver_lt` whether it still applies to the version found, and stays in place
+permanently. Jumping from 1.0.0 to 1.5.0 runs every applicable migration in
+order.
+
+So there is no release note saying "please reinstall" and no breakage pushed
+onto the user. A `git pull` plus `sudo ./install.sh --all` must always suffice.
+
+**A downgrade is never performed silently.** If the installed version is newer
+than the source, module 48 asks — and refuses in `--non-interactive` mode.
+Pulling an older source over a newer installation is almost always a mistake.
+
+**Tags are immutable.** A published tag is never moved. Mistakes in a release
+are fixed by a new patch release.

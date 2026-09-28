@@ -27,6 +27,7 @@ again after months.
 | `piportal --tailscale-up` | `tsup` | **Connect** Tailscale (login server from the config). Lasts only until the next reboot. |
 | `piportal --tailscale-down` | `tsdown` | **Disconnect** Tailscale. |
 | `piportal start claude` | | Start the Claude Code CLI (installs it automatically if needed). |
+| `piportal --version` | `-V` | Show the installed version (from `/etc/piportal/version`). |
 | `piportal --help` | `-h` | This help. |
 
 **More convenience aliases** (from the next login): `cls`/`clean` (clear screen),

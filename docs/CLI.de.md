@@ -27,6 +27,7 @@ Wiederfinden nach Monaten sofort zur Hand hat.
 | `piportal --tailscale-up` | `tsup` | Tailscale **verbinden** (Login-Server aus der Config). Hält nur bis zum nächsten Reboot. |
 | `piportal --tailscale-down` | `tsdown` | Tailscale **trennen**. |
 | `piportal start claude` | | Claude Code CLI starten (installiert sie automatisch, falls nötig). |
+| `piportal --version` | `-V` | Installierte Version anzeigen (aus `/etc/piportal/version`). |
 | `piportal --help` | `-h` | Diese Hilfe. |
 
 **Weitere Komfort-Aliase** (ab der nächsten Anmeldung): `cls`/`clean` (Bildschirm

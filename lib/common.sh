@@ -24,6 +24,27 @@ PIPORTAL_ASSETS_DIR="${PIPORTAL_ROOT}/assets"
 PIPORTAL_ETC="/etc/piportal"
 PIPORTAL_SBIN="/usr/local/sbin"
 
+# ---------------------------------------------------------------- Version ----
+# Einzige Wahrheitsquelle ist die Datei VERSION in der Repo-Wurzel.
+# Der Installer schreibt sie nach ${PIPORTAL_ETC}/version, damit `piportal
+# --version` auch ohne Repo auskunftsfaehig ist.
+PIPORTAL_VERSION_FILE="${PIPORTAL_ROOT}/VERSION"
+PIPORTAL_INSTALLED_VERSION_FILE="${PIPORTAL_ETC}/version"
+
+# piportal_repo_version – Version aus dem Repo (leer, wenn nicht vorhanden).
+piportal_repo_version() {
+    [ -r "$PIPORTAL_VERSION_FILE" ] || return 1
+    tr -d '[:space:]' < "$PIPORTAL_VERSION_FILE"
+}
+
+# piportal_installed_version – Version des installierten Systems.
+piportal_installed_version() {
+    [ -r "$PIPORTAL_INSTALLED_VERSION_FILE" ] || return 1
+    tr -d '[:space:]' < "$PIPORTAL_INSTALLED_VERSION_FILE"
+}
+
+PIPORTAL_VERSION="$(piportal_repo_version 2>/dev/null || echo "unbekannt")"
+
 # ----------------------------------------------------------------- Farben ----
 if [ -t 1 ] && [ "${PIPORTAL_NO_COLOR:-0}" != "1" ]; then
     C_RESET=$'\033[0m'; C_BOLD=$'\033[1m'
@@ -163,7 +184,12 @@ install_file() {
 # write_file_if_changed <ziel> <modus> – liest Inhalt von stdin, schreibt nur bei Änderung.
 write_file_if_changed() {
     local dst="$1" mode="${2:-0644}" tmp
-    tmp="$(mktemp)"
+    # mktemp kann fehlschlagen, wenn TMPDIR auf ein nicht existierendes
+    # Verzeichnis zeigt. Ohne Pruefung liefe `cat > ""` ins Leere und die
+    # Zieldatei wuerde mit leerem Inhalt ueberschrieben.
+    tmp="$(mktemp 2>/dev/null)" || tmp="$(mktemp /tmp/piportal.XXXXXX)" \
+        || die "Konnte keine temporaere Datei anlegen (TMPDIR=${TMPDIR:-unset})"
+    [ -n "$tmp" ] || die "mktemp lieferte einen leeren Pfad"
     cat > "$tmp"
     ensure_dir "$(dirname "$dst")"
     if [ -f "$dst" ] && cmp -s "$tmp" "$dst"; then

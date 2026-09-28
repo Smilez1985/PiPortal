@@ -5,6 +5,7 @@
 #     piportal --status        Kompakter Statusüberblick (IP, Uptime, CPU, RAM …)
 #     piportal --wifi-switch    WLAN wechseln (Menü) oder: --wifi-switch next
 #     piportal --update         System aktualisieren + Reboot
+#     piportal --version        Installierte Version anzeigen
 #     piportal --help           Diese Hilfe
 #  Gedacht auch für die Steuerung vom Host-PC über die USB-Verbindung
 #  (ssh dietpi@10.10.0.1), selbst wenn gerade kein WLAN verbunden ist.
@@ -400,6 +401,27 @@ cmd_tailscale_down() {
 # ==============================================================================
 #  Hilfe / Dispatch
 # ==============================================================================
+# ---- Version -----------------------------------------------------------------
+# Einzige Wahrheitsquelle ist /etc/piportal/version, geschrieben von Modul 48
+# beim Installieren. Fehlt die Datei, stammt die Installation aus einer
+# Version vor 1.3.0 (oder wurde von Hand kopiert).
+VERSION_FILE="/etc/piportal/version"
+
+cmd_version() {
+    local v
+    if [ -r "$VERSION_FILE" ]; then
+        v="$(tr -d '[:space:]' < "$VERSION_FILE")"
+    fi
+    if [ -z "${v:-}" ]; then
+        printf 'piportal %sunbekannt%s\n' "$YL" "$R"
+        printf '%s  %s fehlt – Installation aelter als 1.3.0 oder manuell kopiert.%s\n' \
+            "$DIM" "$VERSION_FILE" "$R"
+        printf '%s  Abhilfe: sudo ./install.sh --only 48_version%s\n' "$DIM" "$R"
+        return 1
+    fi
+    printf 'piportal %s%s%s\n' "$B" "$v" "$R"
+}
+
 cmd_help() {
     cat <<EOF
 ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
@@ -417,6 +439,7 @@ ${B}piportal${R} – Verwaltungs-CLI für den PiPortal
   ${CY}piportal --tailscale-up${R}   Tailscale verbinden (Login-Server aus Config; hält bis Reboot)  ${DIM}[tsup]${R}
   ${CY}piportal --tailscale-down${R} Tailscale trennen  ${DIM}[tsdown]${R}
   ${CY}piportal start claude${R}     Claude Code CLI starten (installiert sie automatisch, falls nötig)
+  ${CY}piportal --version${R}        Installierte Version anzeigen  ${DIM}[-V]${R}
   ${CY}piportal --help${R}           Diese Hilfe
 
 Tipp: Vom Host-PC per USB erreichbar mit  ${DIM}ssh ${SMB_USER}@${USB_LAN_IP}${R}  –
@@ -439,6 +462,7 @@ case "${1:-}" in
                                    claude) cmd_start_claude ;;
                                    *) echo "${RD}Unbekannt: start ${1:-}${R}"; echo "  Verfügbar: ${CY}piportal start claude${R}"; exit 1 ;;
                                esac ;;
+    --version|version|-V)      cmd_version ;;
     --help|help|-h|"")         cmd_help ;;
     *) echo "${RD}Unbekannter Befehl: $1${R}"; echo; cmd_help; exit 1 ;;
 esac

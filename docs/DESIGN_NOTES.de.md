@@ -85,3 +85,36 @@ Das fertige Gerät wurde live an einem Windows-11-PC verifiziert: das Einstecken
 - **Single-Config** tauscht das saubere Linux/macOS-ECM-Gesicht gegen bombenfeste Windows-Bindung. ECM ist einen Config-Schalter entfernt, wenn ein Host es braucht.
 - **Read-only-Wegweiser** heißt: der Stick selbst trägt per Design nie Nutzdaten — alles Echte läuft über SMB. Das ist der ganze Sinn der Korruptions-Beseitigung, keine zu umgehende Einschränkung.
 - **512 MB RAM** werden durch zram plus ein nach Kartengröße gestaffeltes SD-Swapfile abgefedert, nicht aufgehoben; fordernde Werkzeuge laufen, aber das ist ein Zero 2 W, keine Workstation.
+
+---
+
+## 6. Versionierung und Releases
+
+**Die `VERSION`-Datei in der Repo-Wurzel ist die einzige Wahrheitsquelle.**
+Modul 48 stempelt sie bei der Installation nach `/etc/piportal/version`, damit
+`piportal --version` auch auf einem Gerät ohne Repo Auskunft geben kann.
+
+**Ein Versionssprung bricht nie eine laufende Installation.**
+Das ist eine bewusste Abweichung von der üblichen SemVer-Lesart, nach der ein
+Major-Sprung erwartbar etwas kaputt macht. Bei einem idempotenten Installer
+wäre das ein Widerspruch in sich: Wenn `install.sh` eine bestehende Installation
+ohnehin auf den Soll-Zustand bringt, ist es seine Aufgabe, auch den Übergang
+zwischen zwei Versionen zu regeln — nicht die des Nutzers.
+
+Praktisch heißt das: Was in einem neuen Release anders ist und bestehende
+Installationen betrifft, gehört in `migrate_from()` in Modul 48. Jeder Block
+prüft mit `ver_lt`, ob er für die vorgefundene Version noch nötig ist, und
+bleibt dauerhaft stehen. Wer von 1.0.0 auf 1.5.0 springt, durchläuft alle
+zutreffenden Migrationen der Reihe nach.
+
+Es gibt deshalb keine Release-Notiz „bitte neu installieren“ und keinen Bruch,
+der dem Nutzer aufgebürdet wird. Ein `git pull` plus `sudo ./install.sh --all`
+muss immer genügen.
+
+**Ein Downgrade wird nicht stillschweigend ausgeführt.** Ist die installierte
+Version neuer als die Quelle, fragt Modul 48 nach — und im Modus
+`--non-interactive` lehnt es ab. Eine ältere Quelle über eine neuere
+Installation zu ziehen ist fast immer ein Versehen.
+
+**Tags sind unveränderlich.** Ein veröffentlichtes Tag wird nie verschoben.
+Fehler in einem Release werden durch ein neues Patch-Release behoben.

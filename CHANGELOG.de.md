@@ -4,6 +4,29 @@
 
 Alle nennenswerten Änderungen an PiPortal. Format nach [Keep a Changelog](https://keepachangelog.com/de/1.1.0/), Versionierung nach [SemVer](https://semver.org/lang/de/).
 
+## [Unreleased]
+
+### Hinzugefügt
+- **`piportal --version` (Alias `-V`)** – zeigt die installierte Version. Einzige Wahrheitsquelle
+  ist die Datei `VERSION` in der Repo-Wurzel; Modul 48 stempelt sie bei der Installation nach
+  `/etc/piportal/version`, damit die CLI auch ohne Repo Auskunft geben kann. Fehlt die Datei
+  (Installation älter als 1.3.0 oder von Hand kopiert), sagt der Befehl das und nennt die Abhilfe.
+- **Modul 48 – Versionsstempel**, idempotent wie jede andere Phase:
+  Datei fehlt → anlegen · gleiche Version → unverändert lassen · abweichende Version → aktualisieren.
+  Beim Upgrade läuft `migrate_from()` – der vorgesehene Ort für Umbauten, die bestehende
+  Installationen betreffen. Ein Versionssprung darf einen laufenden PiPortal **nie** brechen:
+  Den Übergang regelt der Installer, nicht eine Release-Notiz „bitte neu installieren“.
+  Ein Downgrade wird im Modus `--non-interactive` abgelehnt und sonst nachgefragt.
+
+### Behoben
+- **`write_file_if_changed()` konnte die Zieldatei stillschweigend leeren.** `mktemp` wurde ohne
+  Prüfung des Ergebnisses aufgerufen. Zeigt `TMPDIR` auf ein nicht existierendes Verzeichnis,
+  liefert es einen leeren Pfad, `cat > ""` schlägt fehl, und `install` bekam anschließend eine
+  leere Quelle – die Zieldatei war danach leer. Der Aufruf weicht jetzt auf ein explizites
+  Template aus und bricht ab, wenn beide Versuche scheitern.
+
+---
+
 ## [1.2.0] — 2026-09-22 15:35 CEST
 
 ### Hinzugefügt

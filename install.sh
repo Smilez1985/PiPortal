@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${SCRIPT_DIR}/lib/common.sh"
 
 # Reihenfolge der Phasen (Dateiname ohne .sh, Funktionsname = module_<name>).
-PHASES=(00_backup 01_hostname 05_swap 10_network_usb 15_boot_tuning 20_wifi_roaming 30_gadget 40_portal_smb 45_cli 47_updater 50_extras 55_tailscale)
+PHASES=(00_backup 01_hostname 05_swap 10_network_usb 15_boot_tuning 20_wifi_roaming 30_gadget 40_portal_smb 45_cli 47_updater 48_version 50_extras 55_tailscale)
 
 usage() {
     cat <<'EOF'
@@ -47,6 +47,7 @@ Phasen:
   40_portal_smb       Samba gehärtet + Wegweiser-Image
   45_cli              piportal-CLI (--status/--wifi-switch/--update/--smb-passwd/--publish) + Aliase
   47_updater          Update-Routine (tools/update) + Login-Abfrage
+  48_version          Versionsstempel /etc/piportal/version + Migrationen
   50_extras           SSH-Helper, optional Claude Code CLI
   55_tailscale        Tailscale-Client (Opt-in, kein Onboarding) – ENABLE_TAILSCALE=1
 EOF
